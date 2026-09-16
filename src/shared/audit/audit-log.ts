@@ -1,4 +1,4 @@
-import type { AuditAction } from "@prisma/client";
+import type { AuditAction, Prisma } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 
 export interface AuditLogInput {
@@ -18,7 +18,7 @@ export async function logAuditEvent(input: AuditLogInput): Promise<void> {
       action: input.action,
       entityType: input.entityType,
       entityId: input.entityId,
-      metadata: input.metadata ?? undefined,
+      metadata: (input.metadata as Prisma.InputJsonValue | undefined) ?? undefined,
     },
   });
 }

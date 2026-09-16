@@ -22,7 +22,7 @@ export class ScoringConfigService {
     return {
       id: config.id,
       organizationId: config.organizationId,
-      criteria: config.criteria as ScoringCriterion[],
+      criteria: config.criteria as unknown as ScoringCriterion[],
       riskThreshold: config.riskThreshold,
     };
   }
@@ -52,7 +52,7 @@ export class ScoringConfigService {
     return {
       id: config.id,
       organizationId: config.organizationId,
-      criteria: config.criteria as ScoringCriterion[],
+      criteria: config.criteria as unknown as ScoringCriterion[],
       riskThreshold: config.riskThreshold,
     };
   }
