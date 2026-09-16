@@ -66,8 +66,10 @@ CRON_SECRET="..."      # secret aléatoire
 ### Option A — Prisma (recommandé)
 
 ```bash
-npx prisma migrate deploy
+npm run db:migrate:deploy
 ```
+
+> **Note :** Prisma ne lit pas `.env.local` par défaut. Utilisez les scripts `npm run db:*` qui chargent `.env.local` automatiquement.
 
 ### Option B — Éditeur SQL Supabase
 
