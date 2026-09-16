@@ -1,12 +1,39 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+function getSupabaseConfig(): { url: string; anonKey: string } | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
+  if (!url || !anonKey || url.includes("[project-ref]")) {
+    return null;
+  }
+
+  try {
+    new URL(url);
+    return { url, anonKey };
+  } catch {
+    return null;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
+  const supabaseConfig = getSupabaseConfig();
+  if (!supabaseConfig) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        "[middleware] Supabase non configuré — auth désactivée en dev. Corrigez NEXT_PUBLIC_SUPABASE_URL dans .env.local",
+      );
+      return supabaseResponse;
+    }
+    return NextResponse.json({ error: "Supabase configuration missing" }, { status: 500 });
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+    supabaseConfig.url,
+    supabaseConfig.anonKey,
     {
       cookies: {
         getAll() {
