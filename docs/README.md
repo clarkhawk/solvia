@@ -18,6 +18,8 @@ Plateforme de recouvrement pour PME — documentation technique et fonctionnelle
 | [Auth & RBAC](./08-auth-rbac.md) | Rôles, permissions, middleware |
 | [Sécurité](./09-security.md) | Chiffrement, audit, bonnes pratiques |
 | [UI & Design](./10-ui-design.md) | Templates Finly, logos, charte visuelle |
+| [Supabase Auth setup](./11-supabase-auth-setup.md) | Config auth Supabase |
+| [**Production first (sans localhost)**](./12-production-first-setup.md) | **Guide complet solviaa.vercel.app** |
 
 ## Démarrage rapide
 

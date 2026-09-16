@@ -9,6 +9,8 @@
 | **Framework** | Next.js 15 (auto-détecté) |
 | **Branche** | `main` |
 
+> **Guide pas à pas sans localhost :** [12-production-first-setup.md](./12-production-first-setup.md)
+
 ## Étapes de déploiement
 
 ### 1. Connecter le repo GitHub
@@ -33,8 +35,9 @@ Dans **Project Settings → Environment Variables**, ajouter **toutes** les vari
 | `EMAIL_PROVIDER_API_KEY` | Production (optionnel) |
 | `EMAIL_FROM` | Production (optionnel) |
 | `TWILIO_*` | Production (optionnel) |
+| `NEXT_PUBLIC_APP_URL` | Production : `https://solviaa.vercel.app` |
 
-> Utilisez les **mêmes valeurs** qu'en local pour Supabase. `ENCRYPTION_KEY` doit être **identique** entre local et prod si vous partagez la même base.
+> `ENCRYPTION_KEY` : générer **une fois**, identique si vous partagez la même base Supabase. Ne jamais commiter.
 
 ### 3. Build
 
@@ -47,14 +50,12 @@ npm run build      # next build
 
 ### 4. Migrations base de données
 
-Après le premier déploiement, appliquer les migrations **une fois** :
+**Sans localhost** — Supabase SQL Editor :
 
-```bash
-# En local, avec DATABASE_URL prod dans .env
-npx prisma migrate deploy
-```
+1. Coller `prisma/migrations/20250916000000_init/migration.sql` → Run
+2. Coller `supabase/seed-demo.sql` → Run
 
-Ou via CI / script manuel pointant vers la DB Supabase production.
+Voir [12-production-first-setup.md](./12-production-first-setup.md).
 
 ### 5. Domaine custom
 
@@ -94,7 +95,7 @@ Dans Supabase → **Authentication → URL Configuration** :
 | Champ | Valeur |
 |---|---|
 | Site URL | `https://solviaa.vercel.app` |
-| Redirect URLs | `https://solviaa.vercel.app/**`, `http://localhost:3000/**` |
+| Redirect URLs | `https://solviaa.vercel.app/**` |
 
 ## Preview deployments
 

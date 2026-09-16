@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { createSupabaseBrowserClient } from "@/shared/auth/supabase-browser";
 
 const links = [
   { href: "/", label: "Dashboard" },
@@ -16,6 +17,14 @@ const links = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <aside className="flex h-full w-64 flex-col border-r bg-slate-950 text-white">
@@ -37,6 +46,15 @@ export function Sidebar() {
           </Link>
         ))}
       </nav>
+      <div className="border-t border-slate-800 p-4">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full rounded-md px-3 py-2 text-left text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+        >
+          Déconnexion
+        </button>
+      </div>
     </aside>
   );
 }

@@ -4,6 +4,10 @@ Plateforme web de recouvrement pour PME — suivi des échéances, impayés, rel
 
 **Production :** [https://solviaa.vercel.app](https://solviaa.vercel.app)
 
+## Production
+
+**[https://solviaa.vercel.app](https://solviaa.vercel.app)** — guide de mise en prod : [docs/12-production-first-setup.md](./docs/12-production-first-setup.md)
+
 ## Documentation
 
 La documentation complète du projet se trouve dans le dossier **[`docs/`](./docs/README.md)** :

@@ -79,6 +79,8 @@ Supabase Auth (`auth.users`) et table applicative `users` sont **liées manuelle
 
 Sans entrée dans `users`, l'API retourne `403 USER_NOT_FOUND`.
 
+**Guide complet :** [11-supabase-auth-setup.md](./11-supabase-auth-setup.md)
+
 ## Supabase — URLs production
 
 Configurer dans Supabase → Authentication → URL Configuration :
