@@ -2,75 +2,55 @@
 
 /**
  * @file page.tsx
- * @description Écran d'authentification et d'onboarding SaaS Solvia haute performance.
- * Architecture en double panneau (Split-Screen) inspirée des standards des meilleures fintechs (Stripe, Qonto, Pennylane).
- *
- * Directives strictes appliquées :
- * - Zéro emoji (utilisation exclusive d'icônes vectorielles Lucide).
- * - Zéro dégradé parasite (palette flat, surfaces nettes, contrastes élevés).
- * - Palette Maquette 1 : Indigo (#4F46E5), Nuit Profonde (#1E1B4B), Ardoise (#0F172A, #64748B).
- * - Double mode fluide : Connexion utilisateur / Inscription d'entreprise instantanée.
- * - Vitrine produit intégrée : Aperçu dynamique des fonctionnalités clés de recouvrement.
+ * @description Écran d'authentification Solvia selon la maquette exacte fournie :
+ * - Carte globale arrondie unifiée (rounded-[32px])
+ * - Volet gauche bleu Indigo (#4F46E5) : logo blanc, phrase d'accroche élégante et illustration
+ * - Volet droit blanc : sélecteur de langue, titre fort, inputs épurés, toggle œil mot de passe,
+ *   bouton d'action pilule et lien de bascule Connexion / Créer un compte.
  *
  * @module app/(auth)/login
  */
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/shared/auth/supabase-browser";
 import {
+  Shield,
+  Eye,
+  EyeOff,
   Building2,
   Mail,
   Lock,
   ArrowRight,
-  Shield,
   AlertCircle,
-  Loader2,
   CheckCircle2,
-  Eye,
-  EyeOff,
-  TrendingUp,
-  MessageSquare,
-  Clock,
-  Sparkles,
-  LockKeyhole,
+  Loader2,
+  Globe,
 } from "lucide-react";
 
-/**
- * Modes d'authentification disponibles.
- */
 type AuthMode = "signin" | "signup";
 
 export default function LoginPage() {
   const router = useRouter();
 
-  // Mode actif (Connexion ou Inscription)
   const [mode, setMode] = useState<AuthMode>("signin");
-
-  // Champs de saisie
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [currency, setCurrency] = useState("EUR");
   const [showPassword, setShowPassword] = useState(false);
 
-  // États de chargement et retours
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  /**
-   * Bascule entre connexion et inscription avec remise à zéro des états d'erreur.
-   */
   function switchMode(newMode: AuthMode) {
     setMode(newMode);
     setErrorMessage(null);
     setSuccessMessage(null);
   }
 
-  /**
-   * Connexion via Supabase Auth.
-   */
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
     setErrorMessage(null);
@@ -85,7 +65,7 @@ export default function LoginPage() {
 
       if (authError) {
         if (authError.message.toLowerCase().includes("invalid login credentials")) {
-          setErrorMessage("Identifiants incorrects. Vérifiez votre adresse email et votre mot de passe.");
+          setErrorMessage("Identifiants incorrects. Vérifiez votre email et mot de passe.");
         } else {
           setErrorMessage(authError.message);
         }
@@ -96,14 +76,11 @@ export default function LoginPage() {
       router.push("/");
       router.refresh();
     } catch {
-      setErrorMessage("Une erreur de communication est survenue. Veuillez vérifier votre réseau.");
+      setErrorMessage("Erreur réseau. Veuillez réessayer.");
       setLoading(false);
     }
   }
 
-  /**
-   * Inscription d'une nouvelle entreprise et de son compte administrateur.
-   */
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setErrorMessage(null);
@@ -125,14 +102,13 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error || "Impossible de créer votre entreprise.");
+        setErrorMessage(data.error || "Impossible de créer l'entreprise.");
         setLoading(false);
         return;
       }
 
-      setSuccessMessage("Entreprise créée avec succès ! Initialisation de votre espace...");
+      setSuccessMessage("Compte entreprise créé ! Connexion en cours...");
 
-      // Connexion automatique immédiate
       const supabase = createSupabaseBrowserClient();
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -141,7 +117,7 @@ export default function LoginPage() {
 
       if (signInError) {
         setMode("signin");
-        setSuccessMessage("Compte créé. Veuillez entrer vos identifiants pour vous connecter.");
+        setSuccessMessage("Compte créé. Connectez-vous avec vos identifiants.");
         setLoading(false);
         return;
       }
@@ -149,219 +125,126 @@ export default function LoginPage() {
       router.push("/");
       router.refresh();
     } catch {
-      setErrorMessage("Impossible de joindre le serveur d'inscription. Veuillez réessayer.");
+      setErrorMessage("Impossible de contacter le serveur d'inscription.");
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-[#F8FAFC]">
-      {/* ========================================================================= */}
-      {/* PANNEAU GAUCHE : FORMULAIRE D'AUTHENTIFICATION & ONBOARDING               */}
-      {/* ========================================================================= */}
-      <div className="flex flex-1 flex-col justify-between px-6 py-10 sm:px-12 lg:max-w-[540px] xl:px-16">
-        {/* En-tête : Logo et Identité */}
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4F46E5] text-white shadow-sm">
+    <div className="relative flex min-h-screen items-center justify-center bg-[#F1F4F9] px-4 py-8 sm:px-6">
+      {/* Taches de lumière douce d'arrière-plan comme la maquette */}
+      <div className="pointer-events-none absolute left-10 top-10 h-96 w-96 rounded-full bg-[#818CF8]/20 blur-[120px]" />
+      <div className="pointer-events-none absolute right-10 bottom-10 h-96 w-96 rounded-full bg-[#C7D2FE]/25 blur-[120px]" />
+
+      {/* Carte globale arrondie unifiée (exactement comme votre maquette) */}
+      <div className="relative z-10 flex w-full max-w-[980px] flex-col overflow-hidden rounded-[32px] bg-white shadow-[0_25px_60px_-15px_rgba(79,70,229,0.12)] md:flex-row md:items-stretch">
+        {/* =================================================================== */}
+        {/* VOLET GAUCHE : BLEU SOLVIA (#4F46E5) AVEC LOGO & ILLUSTRATION       */}
+        {/* =================================================================== */}
+        <div className="flex flex-col justify-between bg-[#4F46E5] p-8 sm:p-10 text-white md:w-[45%]">
+          {/* Logo blanc */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-sm">
               <Shield className="h-5 w-5" />
             </div>
-            <div>
-              <span className="text-xl font-extrabold tracking-tight text-[#0F172A]">solvia</span>
-              <span className="ml-2 rounded-md bg-[#EEF2FF] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#4F46E5]">
-                SaaS B2B
-              </span>
-            </div>
+            <span className="text-xl font-bold tracking-tight text-white">solvia</span>
           </div>
-        </div>
 
-        {/* Cœur du formulaire */}
-        <div className="my-auto py-8">
-          {/* Titre & Sous-titre contextuels */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold tracking-tight text-[#0F172A] sm:text-3xl">
-              {mode === "signin" ? "Heureux de vous revoir" : "Créez votre entreprise"}
-            </h1>
-            <p className="mt-1.5 text-xs text-[#64748B] sm:text-sm">
-              {mode === "signin"
-                ? "Connectez-vous pour piloter vos encaissements et relances clients."
-                : "Démarrez en libre-service sans carte bancaire requise."}
+          {/* Accroche inspirante */}
+          <div className="my-6">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-snug text-white">
+              Votre allié pour toutes vos relances clients.
+            </h2>
+            <p className="mt-3 text-xs sm:text-sm text-indigo-100 leading-relaxed font-normal">
+              Suivez vos factures échues, anticipez les défauts de paiement et sécurisez votre trésorerie au quotidien.
             </p>
           </div>
 
-          {/* Sélecteur d'onglets (Segmented Pill Switch) */}
-          <div className="mb-6 grid grid-cols-2 rounded-xl border border-[#E2E8F0] bg-[#F1F5F9] p-1 text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => switchMode("signin")}
-              className={`rounded-lg py-2.5 transition-all ${
-                mode === "signin"
-                  ? "bg-white text-[#0F172A] shadow-sm"
-                  : "text-[#64748B] hover:text-[#0F172A]"
-              }`}
-            >
-              Connexion
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode("signup")}
-              className={`rounded-lg py-2.5 transition-all ${
-                mode === "signup"
-                  ? "bg-white text-[#4F46E5] shadow-sm"
-                  : "text-[#64748B] hover:text-[#0F172A]"
-              }`}
-            >
-              Créer une entreprise
-            </button>
+          {/* Illustration 3D intégrée en bas */}
+          <div className="mt-auto flex items-center justify-center overflow-hidden rounded-2xl">
+            <Image
+              src="/images/login-hero-3d.jpg"
+              alt="Illustration Recouvrement Solvia"
+              width={340}
+              height={340}
+              priority
+              className="h-auto w-full max-w-[260px] rounded-2xl object-contain shadow-lg shadow-indigo-900/20 transition-transform duration-300 hover:scale-[1.03]"
+            />
+          </div>
+        </div>
+
+        {/* =================================================================== */}
+        {/* VOLET DROIT : FORMULAIRE ÉPURÉ, CLAIR ET ACCESSIBLE                 */}
+        {/* =================================================================== */}
+        <div className="flex flex-1 flex-col justify-between bg-white p-8 sm:p-12 md:w-[55%]">
+          {/* En-tête : Sélecteur de langue */}
+          <div className="flex items-center justify-end">
+            <div className="flex items-center gap-1.5 text-xs text-[#64748B] hover:text-[#0F172A] cursor-pointer">
+              <Globe className="h-3.5 w-3.5" />
+              <span>Français (FR)</span>
+            </div>
           </div>
 
-          {/* Formulaire : Connexion */}
-          {mode === "signin" && (
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-[#0F172A]">
-                  Email professionnel
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
-                  <input
-                    type="email"
-                    required
-                    autoComplete="email"
-                    placeholder="prenom.nom@entreprise.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-[#E2E8F0] bg-white py-3 pl-10 pr-4 text-xs text-[#0F172A] placeholder-[#94A3B8] transition-all focus:border-[#4F46E5] focus:outline-none focus:ring-4 focus:ring-[#4F46E5]/10"
-                  />
-                </div>
-              </div>
+          {/* Cœur du formulaire */}
+          <div className="my-auto max-w-sm w-full mx-auto py-4">
+            <div className="mb-6 text-center">
+              <h1 className="text-2xl font-bold tracking-tight text-[#0F172A]">
+                {mode === "signin" ? "Connexion" : "Créer un compte"}
+              </h1>
+              <p className="mt-1 text-xs text-[#64748B]">
+                {mode === "signin"
+                  ? "Accédez à votre espace de gestion Solvia"
+                  : "Inscrivez votre entreprise en moins de 2 minutes"}
+              </p>
+            </div>
 
-              <div>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[#0F172A]">
-                    Mot de passe
+            {/* Formulaire : Connexion */}
+            {mode === "signin" && (
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#0F172A]">
+                    Email professionnel
                   </label>
-                  <a
-                    href="#forgot"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setErrorMessage("Veuillez contacter votre administrateur d'organisation pour réinitialiser vos identifiants.");
-                    }}
-                    className="text-[11px] font-medium text-[#4F46E5] hover:underline"
-                  >
-                    Mot de passe oublié ?
-                  </a>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
+                    <input
+                      type="email"
+                      required
+                      autoComplete="email"
+                      placeholder="nom@entreprise.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] py-3 pl-10 pr-4 text-xs text-[#0F172A] placeholder-[#94A3B8] transition-all focus:border-[#4F46E5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/15"
+                    />
+                  </div>
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full rounded-xl border border-[#E2E8F0] bg-white py-3 pl-10 pr-11 text-xs text-[#0F172A] placeholder-[#94A3B8] transition-all focus:border-[#4F46E5] focus:outline-none focus:ring-4 focus:ring-[#4F46E5]/10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label="Afficher ou masquer le mot de passe"
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A]"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
 
-              {errorMessage && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-[#FEE2E2] bg-[#FEF2F2] p-3 text-xs text-[#991B1B]">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#EF4444]" />
-                  <span className="leading-tight">{errorMessage}</span>
-                </div>
-              )}
-
-              {successMessage && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-[#DCFCE7] bg-[#ECFDF5] p-3 text-xs text-[#065F46]">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#10B981]" />
-                  <span className="leading-tight">{successMessage}</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4F46E5] py-3 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#4338CA] focus:outline-none focus:ring-4 focus:ring-[#4F46E5]/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Connexion en cours...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Accéder à mon tableau de bord</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* Formulaire : Création d'entreprise */}
-          {mode === "signup" && (
-            <form onSubmit={handleSignUp} className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-[#0F172A]">
-                  Nom de l&apos;entreprise
-                </label>
-                <div className="relative">
-                  <Building2 className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: Altura Conseil &amp; Associés"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    className="w-full rounded-xl border border-[#E2E8F0] bg-white py-3 pl-10 pr-4 text-xs text-[#0F172A] placeholder-[#94A3B8] transition-all focus:border-[#4F46E5] focus:outline-none focus:ring-4 focus:ring-[#4F46E5]/10"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-[#0F172A]">
-                  Email administrateur
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
-                  <input
-                    type="email"
-                    required
-                    autoComplete="email"
-                    placeholder="direction@votre-entreprise.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-[#E2E8F0] bg-white py-3 pl-10 pr-4 text-xs text-[#0F172A] placeholder-[#94A3B8] transition-all focus:border-[#4F46E5] focus:outline-none focus:ring-4 focus:ring-[#4F46E5]/10"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
-                  <label className="mb-1.5 block text-xs font-semibold text-[#0F172A]">
-                    Mot de passe
-                  </label>
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label className="text-xs font-semibold text-[#0F172A]">
+                      Mot de passe
+                    </label>
+                    <a
+                      href="#forgot"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setErrorMessage("Contactez votre administrateur pour réinitialiser vos identifiants.");
+                      }}
+                      className="text-[11px] font-medium text-[#4F46E5] hover:underline"
+                    >
+                      Mot de passe oublié ?
+                    </a>
+                  </div>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
                     <input
                       type={showPassword ? "text" : "password"}
                       required
-                      minLength={8}
-                      autoComplete="new-password"
-                      placeholder="8 caractères min."
+                      autoComplete="current-password"
+                      placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-xl border border-[#E2E8F0] bg-white py-3 pl-10 pr-11 text-xs text-[#0F172A] placeholder-[#94A3B8] transition-all focus:border-[#4F46E5] focus:outline-none focus:ring-4 focus:ring-[#4F46E5]/10"
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] py-3 pl-10 pr-10 text-xs text-[#0F172A] placeholder-[#94A3B8] transition-all focus:border-[#4F46E5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/15"
                     />
                     <button
                       type="button"
@@ -374,152 +257,188 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#0F172A]">
-                    Devise
-                  </label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full rounded-xl border border-[#E2E8F0] bg-white py-3 px-3 text-xs text-[#0F172A] transition-all focus:border-[#4F46E5] focus:outline-none focus:ring-4 focus:ring-[#4F46E5]/10"
-                  >
-                    <option value="EUR">EUR (€)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="XOF">XOF (CFA)</option>
-                    <option value="GBP">GBP (£)</option>
-                  </select>
-                </div>
-              </div>
-
-              {errorMessage && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-[#FEE2E2] bg-[#FEF2F2] p-3 text-xs text-[#991B1B]">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#EF4444]" />
-                  <span className="leading-tight">{errorMessage}</span>
-                </div>
-              )}
-
-              {successMessage && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-[#DCFCE7] bg-[#ECFDF5] p-3 text-xs text-[#065F46]">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#10B981]" />
-                  <span className="leading-tight">{successMessage}</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4F46E5] py-3 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#4338CA] focus:outline-none focus:ring-4 focus:ring-[#4F46E5]/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Création de votre entreprise...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Créer l&apos;organisation et démarrer</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-        </div>
-
-        {/* Pied de panneau : Garanties & Sécurité */}
-        <div className="border-t border-[#E2E8F0] pt-6">
-          <div className="flex items-center gap-4 text-[11px] text-[#64748B]">
-            <div className="flex items-center gap-1.5">
-              <LockKeyhole className="h-3.5 w-3.5 text-[#10B981]" />
-              <span>Chiffrement AES-256</span>
-            </div>
-            <span>&bull;</span>
-            <div className="flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5 text-[#4F46E5]" />
-              <span>Conformité RGPD</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* PANNEAU DROIT : VITRINE PRODUIT SAAS (STYLE FINNOVA / MAQUETTE 1)         */}
-      {/* ========================================================================= */}
-      <div className="hidden lg:flex flex-1 flex-col justify-between bg-[#1E1B4B] p-12 text-white xl:p-16">
-        {/* En-tête du volet vitrine */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white">
-            <Sparkles className="h-3.5 w-3.5 text-[#818CF8]" />
-            <span>Moteur de recouvrement intelligent</span>
-          </div>
-          <span className="text-xs text-[#94A3B8]">Solvia OS v1.0</span>
-        </div>
-
-        {/* Message d'impact & Accroche métier */}
-        <div className="my-auto max-w-lg space-y-6">
-          <h2 className="text-3xl font-extrabold tracking-tight text-white xl:text-4xl leading-tight">
-            Récupérez votre trésorerie bloquée sans détériorer la relation client.
-          </h2>
-          <p className="text-sm text-[#94A3B8] leading-relaxed">
-            Solvia analyse les habitudes de paiement de vos débiteurs, calcule leur score de risque et orchestre des relances multicanales intelligentes (Email, WhatsApp, Téléphone).
-          </p>
-
-          {/* Cartes interactives Bento / Maquette 1 */}
-          <div className="space-y-3.5 pt-4">
-            {/* Carte 1 : Relance intelligente simulée */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#10B981]/20 text-[#10B981]">
-                    <MessageSquare className="h-4 w-4" />
+                {errorMessage && (
+                  <div className="flex items-start gap-2 rounded-xl border border-[#FEE2E2] bg-[#FEF2F2] p-2.5 text-xs text-[#991B1B]">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#EF4444]" />
+                    <span>{errorMessage}</span>
                   </div>
-                  <span className="text-xs font-semibold text-white">Relance IA ciblée</span>
-                </div>
-                <span className="rounded-md bg-[#10B981]/20 px-2 py-0.5 text-[10px] font-bold text-[#10B981]">
-                  Délai moyen -62%
-                </span>
-              </div>
-              <p className="text-xs text-[#94A3B8]">
-                « Bonjour Marc, suite à notre échange du 12, voici le lien de règlement de la facture FAC-2026-088. »
-              </p>
-            </div>
+                )}
 
-            {/* Carte 2 : Métriques de flux */}
-            <div className="grid grid-cols-2 gap-3.5">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-2 text-[#94A3B8] text-xs mb-1">
-                  <Clock className="h-3.5 w-3.5 text-[#818CF8]" />
-                  <span>Délai de règlement</span>
-                </div>
-                <p className="text-2xl font-bold text-white">16 jours</p>
-                <p className="text-[10px] text-[#10B981] mt-1 flex items-center gap-1 font-semibold">
-                  <TrendingUp className="h-3 w-3" />
-                  <span>-8 jours vs mois précédent</span>
-                </p>
-              </div>
+                {successMessage && (
+                  <div className="flex items-start gap-2 rounded-xl border border-[#DCFCE7] bg-[#ECFDF5] p-2.5 text-xs text-[#065F46]">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#10B981]" />
+                    <span>{successMessage}</span>
+                  </div>
+                )}
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-2 text-[#94A3B8] text-xs mb-1">
-                  <Shield className="h-3.5 w-3.5 text-[#F59E0B]" />
-                  <span>Précision du scoring</span>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4F46E5] py-3.5 text-xs font-bold text-white shadow-md shadow-indigo-100 transition-all hover:bg-[#4338CA] focus:outline-none focus:ring-2 focus:ring-[#4F46E5] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Connexion en cours...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Se connecter</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* Formulaire : Création d'entreprise */}
+            {mode === "signup" && (
+              <form onSubmit={handleSignUp} className="space-y-3.5">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#0F172A]">
+                    Nom de l&apos;entreprise
+                  </label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Acme Recouvrement"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] py-3 pl-10 pr-3.5 text-xs text-[#0F172A] placeholder-[#94A3B8] transition-all focus:border-[#4F46E5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/15"
+                    />
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-white">94,2%</p>
-                <p className="text-[10px] text-[#94A3B8] mt-1 font-semibold">
-                  Anticipation des défauts
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#0F172A]">
+                    Email administrateur
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
+                    <input
+                      type="email"
+                      required
+                      autoComplete="email"
+                      placeholder="direction@entreprise.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] py-3 pl-10 pr-3.5 text-xs text-[#0F172A] placeholder-[#94A3B8] transition-all focus:border-[#4F46E5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/15"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div className="col-span-2">
+                    <label className="mb-1 block text-xs font-semibold text-[#0F172A]">
+                      Mot de passe
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        minLength={8}
+                        autoComplete="new-password"
+                        placeholder="8 car. min"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] py-3 pl-10 pr-9 text-xs text-[#0F172A] placeholder-[#94A3B8] transition-all focus:border-[#4F46E5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/15"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label="Afficher ou masquer le mot de passe"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A]"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-[#0F172A]">
+                      Devise
+                    </label>
+                    <select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] py-3 px-2.5 text-xs text-[#0F172A] transition-all focus:border-[#4F46E5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/15"
+                    >
+                      <option value="EUR">EUR (€)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="XOF">XOF (CFA)</option>
+                      <option value="GBP">GBP (£)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {errorMessage && (
+                  <div className="flex items-start gap-2 rounded-xl border border-[#FEE2E2] bg-[#FEF2F2] p-2.5 text-xs text-[#991B1B]">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#EF4444]" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+
+                {successMessage && (
+                  <div className="flex items-start gap-2 rounded-xl border border-[#DCFCE7] bg-[#ECFDF5] p-2.5 text-xs text-[#065F46]">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#10B981]" />
+                    <span>{successMessage}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4F46E5] py-3.5 text-xs font-bold text-white shadow-md shadow-indigo-100 transition-all hover:bg-[#4338CA] focus:outline-none focus:ring-2 focus:ring-[#4F46E5] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Création de l&apos;entreprise...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Créer mon entreprise et démarrer</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* Lien de bascule comme sur la maquette : Already have an account? Log In */}
+            <div className="mt-6 text-center text-xs text-[#64748B]">
+              {mode === "signin" ? (
+                <p>
+                  Pas encore de compte ?{" "}
+                  <button
+                    type="button"
+                    onClick={() => switchMode("signup")}
+                    className="font-bold text-[#4F46E5] hover:underline"
+                  >
+                    Créer une entreprise
+                  </button>
                 </p>
-              </div>
+              ) : (
+                <p>
+                  Vous avez déjà un compte ?{" "}
+                  <button
+                    type="button"
+                    onClick={() => switchMode("signin")}
+                    className="font-bold text-[#4F46E5] hover:underline"
+                  >
+                    Se connecter
+                  </button>
+                </p>
+              )}
             </div>
           </div>
-        </div>
 
-        {/* Témoignage / Preuve sociale */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-xs italic text-[#CBD5E1] leading-relaxed">
-            « En important nos factures sur Solvia, nous avons récupéré 42 000 € d&apos;impayés dès le premier mois grâce aux relances séquencées. »
-          </p>
-          <div className="mt-3 flex items-center justify-between text-xs">
-            <span className="font-semibold text-white">Directeur Administratif &amp; Financier</span>
-            <span className="text-[#818CF8]">PME Industrie &bull; 80 collaborateurs</span>
+          {/* Pied de page informatif */}
+          <div className="text-center text-[11px] text-[#94A3B8]">
+            Plateforme sécurisée &bull; Chiffrement bancaire AES-256 &bull; Conforme RGPD
           </div>
         </div>
       </div>
