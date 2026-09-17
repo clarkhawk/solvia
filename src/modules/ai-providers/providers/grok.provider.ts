@@ -13,7 +13,9 @@ export class GrokProvider implements AIProvider {
       baseURL: "https://api.x.ai/v1",
     });
     const response = await client.chat.completions.create({
-      model: "grok-2-latest",
+      // Grok 4.3 is a current, stable xAI model suited to short
+      // transactional messages while keeping generation costs controlled.
+      model: "grok-4.3",
       messages: [{ role: "user", content: buildPrompt(params) }],
       max_tokens: 500,
     });
