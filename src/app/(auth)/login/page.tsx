@@ -2,15 +2,13 @@
 
 /**
  * @file page.tsx
- * @description Écran d'authentification Solvia reproduisant fidèlement la nouvelle maquette de référence :
- * - Arrière-plan ambient fluide violet/bleu moderne
- * - Carte centrale bicolore avec volet gauche lavande (#92A4FA) et volet droit blanc (#FFFFFF)
- * - Personnage détendu dans son fauteuil (« CozyCharacter ») placé par-dessus la frontière,
- *   débordant avec son ordinateur, son chat et ses bulles d'interaction
- * - Interface dynamique et vivante (« pas figé ») : transitions animées entre modes Inscription et Connexion,
- *   micro-animations douces, soulignement d'input réactif et sélecteur de langue bilingue (FR/EN)
- * - Intégration complète des fonctions réelles : Supabase Auth, inscription SaaS atomique (/api/v1/auth/signup),
- *   connexion Google OAuth, accès démo en 1-clic et redirection vers le dashboard.
+ * @description Page d'authentification Solvia structurée exactement selon la spécification de l'utilisateur :
+ * - Conteneur .login-page avec fond dégradé vibrant
+ * - Carte .login-card de 1000px avec bordure arrondie de 30px
+ * - Volet gauche .left-side (35%, #8d9cf0) avec logo .brand, texte .tagline et illustration découpée transparente (.illustration)
+ * - Volet droit .right-side (65%, fond blanc, arrondi 30px) avec sélecteur .language et formulaire .form-container
+ * - Interface interactive et dynamique ("pas figé") : micro-animations douces, soulignement d'input réactif, bilingue FR/EN
+ * - Fonctions réelles préservées : Inscription atomique SaaS, Connexion Supabase Auth, Google OAuth, Accès Démo en 1-clic
  *
  * @module app/(auth)/login
  */
@@ -31,30 +29,29 @@ import {
 } from "lucide-react";
 
 type AuthMode = "signup" | "signin";
-type Language = "fr" | "en";
+type Language = "en" | "fr";
 
 export default function LoginPage() {
   const router = useRouter();
 
-  // Mode d'authentification : Inscription ou Connexion
+  // Mode Inscription ou Connexion
   const [mode, setMode] = useState<AuthMode>("signup");
 
-  // Sélecteur de langue interactif
-  const [lang, setLang] = useState<Language>("fr");
+  // Langue active (par défaut English comme sur la maquette, basculable en Français)
+  const [lang, setLang] = useState<Language>("en");
 
-  // Champs de formulaire
+  // Champs de saisie
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [currency, setCurrency] = useState("EUR");
   const [showPassword, setShowPassword] = useState(false);
 
-  // États de chargement et retours d'information
+  // États de chargement et retours
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Bascule fluide de mode
   function switchMode(newMode: AuthMode) {
     setMode(newMode);
     setErrorMessage(null);
@@ -63,20 +60,38 @@ export default function LoginPage() {
 
   // Textes bilingues
   const t = {
+    en: {
+      brandTagline: "A Buddy for all your cash collection and invoice recovery.",
+      badge: "AI Cash Collection",
+      langSelect: "English (UK)",
+      createTitle: "Create Account",
+      loginTitle: "Welcome Back",
+      googleBtn: "Sign Up with Google",
+      facebookBtn: "1-Click Demo",
+      orDivider: "— OR —",
+      namePlaceholder: "Full Name",
+      emailPlaceholder: "Email Address",
+      passwordPlaceholder: "Password",
+      submitCreate: "Create Account",
+      submitLogin: "Log In",
+      hasAccount: "Already have an account?",
+      noAccount: "Don't have an account?",
+      loginLink: "Log In",
+      signupLink: "Sign Up",
+      demoLoaded: "Demo credentials pre-filled.",
+    },
     fr: {
-      leftTagline: "Votre allié pour piloter et automatiser tout votre recouvrement.",
-      badge: "SaaS Recouvrement IA",
-      langSelect: "FRANÇAIS (FR)",
+      brandTagline: "Votre allié pour piloter et automatiser tout votre recouvrement.",
+      badge: "Recouvrement IA",
+      langSelect: "Français (FR)",
       createTitle: "Créer un compte",
       loginTitle: "Bon retour parmi nous",
-      createSubtitle: "Essai gratuit 14 jours. Sans carte bancaire.",
-      loginSubtitle: "Accédez à votre espace de pilotage sécurisé.",
       googleBtn: "S'inscrire avec Google",
       facebookBtn: "Accès Démo 1-Clic",
-      orDivider: "OU",
-      namePlaceholder: "Nom de l'entreprise ou complet",
+      orDivider: "— OU —",
+      namePlaceholder: "Nom complet ou Entreprise",
       emailPlaceholder: "Adresse email professionnelle",
-      passwordPlaceholder: "Mot de passe sécurisé (min. 8 car.)",
+      passwordPlaceholder: "Mot de passe",
       submitCreate: "Créer un compte",
       submitLogin: "Se connecter",
       hasAccount: "Vous avez déjà un compte ?",
@@ -85,31 +100,9 @@ export default function LoginPage() {
       signupLink: "Créer un compte",
       demoLoaded: "Identifiants de démonstration appliqués.",
     },
-    en: {
-      leftTagline: "A buddy for all your cash collection and invoice recovery.",
-      badge: "AI Cash Collection",
-      langSelect: "English (UK)",
-      createTitle: "Create Account",
-      loginTitle: "Welcome Back",
-      createSubtitle: "14-day free trial. No credit card required.",
-      loginSubtitle: "Sign in to manage your receivables workspace.",
-      googleBtn: "Sign Up with Google",
-      facebookBtn: "1-Click Demo Login",
-      orDivider: "OR",
-      namePlaceholder: "Company or full name",
-      emailPlaceholder: "Work email address",
-      passwordPlaceholder: "Password (min. 8 chars)",
-      submitCreate: "Create Account",
-      submitLogin: "Sign In",
-      hasAccount: "Already have an account?",
-      noAccount: "Don't have an account?",
-      loginLink: "Log In",
-      signupLink: "Sign Up",
-      demoLoaded: "Demo credentials applied.",
-    },
   }[lang];
 
-  // Gestion de la connexion standard Supabase
+  // Connexion Supabase
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
     setErrorMessage(null);
@@ -148,7 +141,7 @@ export default function LoginPage() {
     }
   }
 
-  // Gestion de l'inscription atomique multi-tenant
+  // Inscription atomique multi-tenant
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setErrorMessage(null);
@@ -160,7 +153,7 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          companyName: companyName.trim() || "Mon Entreprise",
+          companyName: companyName.trim() || "Entreprise",
           email: email.trim(),
           password,
           currency,
@@ -177,7 +170,7 @@ export default function LoginPage() {
 
       setSuccessMessage(
         lang === "fr"
-          ? "Entreprise et compte créés ! Connexion automatique..."
+          ? "Compte créé avec succès ! Connexion en cours..."
           : "Account created! Signing you in..."
       );
 
@@ -191,8 +184,8 @@ export default function LoginPage() {
         setMode("signin");
         setSuccessMessage(
           lang === "fr"
-            ? "Compte créé avec succès. Veuillez vous identifier."
-            : "Account created successfully. Please sign in."
+            ? "Compte créé. Veuillez vous connecter."
+            : "Account created. Please sign in."
         );
         setLoading(false);
         return;
@@ -204,13 +197,13 @@ export default function LoginPage() {
       setErrorMessage(
         lang === "fr"
           ? "Le serveur d'inscription est momentanément indisponible."
-          : "Signup server is temporarily unreachable."
+          : "Signup server is unreachable."
       );
       setLoading(false);
     }
   }
 
-  // Connexion Google OAuth via Supabase
+  // Connexion Google OAuth
   async function handleGoogleAuth() {
     try {
       const supabase = createSupabaseBrowserClient();
@@ -228,7 +221,7 @@ export default function LoginPage() {
     }
   }
 
-  // Remplissage automatique pour accès démo rapide
+  // Accès démo pré-rempli
   function handleDemoAccess() {
     setEmail("admin@demo.solvia.app");
     setPassword("SolviaDemo2026!");
@@ -236,23 +229,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-[#7941F2] via-[#5244E6] to-[#3B65FF] p-4 sm:p-8 overflow-hidden">
-      {/* Halos ambiants en arrière-plan pour donner de la profondeur */}
-      <div className="absolute top-1/4 left-1/10 h-96 w-96 rounded-full bg-pink-500/20 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/10 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl pointer-events-none" />
+    <main className="login-page relative flex min-h-screen items-center justify-center bg-gradient-to-br from-[#7941F2] via-[#5244E6] to-[#3B65FF] p-4 sm:p-8 overflow-hidden">
+      {/* Halos lumineux d'ambiance pour une page vivante */}
+      <div className="absolute top-1/4 left-1/12 h-96 w-96 rounded-full bg-pink-500/20 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/12 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl pointer-events-none" />
 
       {/* ===================================================================== */}
-      {/* CARTE CENTRALE FLOTTANTE BICOLORE                                     */}
+      {/* CARTE PRINCIPALE (.login-card)                                        */}
       {/* ===================================================================== */}
-      <div className="relative flex w-full max-w-[960px] min-h-[580px] rounded-[32px] overflow-hidden bg-[#92A4FA] shadow-[0_25px_70px_rgba(20,10,80,0.30)] flex-col md:flex-row transition-all duration-300">
+      <div className="login-card relative flex w-full max-w-[1000px] min-h-[600px] rounded-[30px] bg-[#8d9cf0] shadow-[0_30px_80px_rgba(20,10,80,0.32)] flex-col md:flex-row overflow-visible">
         {/* =================================================================== */}
-        {/* VOLET GAUCHE BLEU LAVANDE (#92A4FA) - 31%                           */}
+        {/* PARTIE GAUCHE (.left-side) - 35%, #8d9cf0, arrondi 30px 0 0 30px     */}
         {/* =================================================================== */}
-        <div className="relative z-10 flex flex-col justify-between p-8 sm:p-10 md:w-[31%] text-white bg-[#92A4FA]">
+        <section className="left-side relative w-full md:w-[35%] bg-[#8d9cf0] md:rounded-l-[30px] p-8 sm:p-10 flex flex-col justify-between text-white z-20">
           <div>
-            {/* Logo Solvia stylisé */}
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md shadow-inner border border-white/30">
+            {/* Logo (.brand) */}
+            <div className="brand flex items-center gap-2.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 shadow-inner">
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <h2 className="text-3xl font-black tracking-tight text-white select-none">
@@ -260,67 +253,60 @@ export default function LoginPage() {
               </h2>
             </div>
 
-            {/* Accroche & Badge dynamique */}
+            {/* Accroche (.tagline) */}
             <div className="mt-6">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-xs border border-white/25">
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white border border-white/20">
                 <Zap className="h-3 w-3 text-amber-300" />
                 {t.badge}
               </span>
-              <p className="mt-3 text-xs sm:text-sm font-medium text-white/95 leading-relaxed max-w-[220px]">
-                {t.leftTagline}
+              <p className="tagline mt-3 text-xs sm:text-sm font-medium text-white/95 leading-relaxed max-w-[230px]">
+                {t.brandTagline}
               </p>
             </div>
           </div>
 
-          {/* Espace inférieur réservé pour accueillir le fauteuil */}
-          <div className="h-44 md:h-64" />
-        </div>
+          {/* Espace vide où vient s'ancrer l'illustration */}
+          <div className="h-48 md:h-64" />
 
-        {/* =================================================================== */}
-        {/* LE COMPOSANT PAR-DESSUS : COZY CHARACTER EN CHEVAUCHEMENT           */}
-        {/* =================================================================== */}
-        <div className="hidden md:block absolute bottom-0 left-0 w-[31%] h-full pointer-events-none z-30">
-          <div className="absolute bottom-0 right-0 w-[420px] translate-x-[152px]">
+          {/* Illustration découpée transparente (.illustration) qui déborde par-dessus à 120% */}
+          <div className="illustration hidden md:block absolute bottom-6 md:bottom-8 left-[48%] -translate-x-1/2 w-[125%] max-w-none z-30 pointer-events-none">
             <CozyCharacter />
           </div>
-        </div>
+        </section>
 
         {/* =================================================================== */}
-        {/* VOLET DROIT BLANC PUR AVEC BORD GAUCHE INCURVÉ - 69%                */}
+        {/* PARTIE DROITE (.right-side) - 65%, blanc, arrondi 30px               */}
         {/* =================================================================== */}
-        <div className="relative z-20 flex flex-1 flex-col justify-between bg-white md:rounded-l-[36px] p-8 sm:p-12 md:pl-28">
-          {/* En-tête : Sélecteur de langue dynamique */}
-          <div className="flex items-center justify-end">
+        <section className="right-side relative z-10 w-full md:w-[65%] bg-white md:rounded-[30px] p-8 sm:p-12 md:pl-28 flex flex-col justify-between shadow-xs">
+          {/* Langue (.language) */}
+          <div className="language flex items-center justify-end">
             <button
               type="button"
-              onClick={() => setLang(lang === "fr" ? "en" : "fr")}
-              className="group flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-all cursor-pointer"
+              onClick={() => setLang(lang === "en" ? "fr" : "en")}
+              className="group flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-all cursor-pointer"
             >
               <span>{t.langSelect}</span>
               <ChevronDown className="h-3 w-3 transition-transform group-hover:rotate-180 duration-300" />
             </button>
           </div>
 
-          {/* Formulaire & Interactions */}
-          <div className="my-auto max-w-[360px] w-full">
-            {/* Titre & sous-titre animés */}
+          {/* Formulaire & Contenu (.form-container) */}
+          <div className="form-container my-auto max-w-[370px] w-full">
+            {/* Titre (h1) */}
             <div className="mb-6 transition-all duration-300">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
                 {mode === "signup" ? t.createTitle : t.loginTitle}
               </h1>
-              <p className="mt-1 text-xs text-slate-500 font-medium">
-                {mode === "signup" ? t.createSubtitle : t.loginSubtitle}
-              </p>
             </div>
 
-            {/* Boutons sociaux Google & Démo */}
-            <div className="mb-5 grid grid-cols-2 gap-3">
+            {/* Connexion sociale (.social-buttons) */}
+            <div className="social-buttons mb-5 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={handleGoogleAuth}
                 className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-xs font-semibold text-slate-700 shadow-xs hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm active:scale-95 transition-all cursor-pointer"
               >
-                {/* Icône Google vectorielle */}
+                {/* Icône Google vectorielle officielle */}
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
@@ -339,7 +325,7 @@ export default function LoginPage() {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                   />
                 </svg>
-                <span className="truncate">{lang === "fr" ? "Google" : "Google"}</span>
+                <span className="truncate">{t.googleBtn}</span>
               </button>
 
               <button
@@ -350,12 +336,12 @@ export default function LoginPage() {
                 <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-[#1877F2] text-[9px] font-black text-white">
                   f
                 </div>
-                <span className="truncate">{lang === "fr" ? "Accès Démo" : "Demo Access"}</span>
+                <span className="truncate">{t.facebookBtn}</span>
               </button>
             </div>
 
-            {/* Séparateur élégant */}
-            <div className="relative my-4 text-center">
+            {/* Séparateur (.separator) */}
+            <div className="separator relative my-4 text-center">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-200" />
               </div>
@@ -364,10 +350,10 @@ export default function LoginPage() {
               </span>
             </div>
 
-            {/* Formulaire interactif Inscription */}
+            {/* Formulaire Inscription */}
             {mode === "signup" && (
               <form onSubmit={handleSignUp} className="space-y-4 transition-all duration-300">
-                {/* Champ Nom Entreprise */}
+                {/* Full Name */}
                 <div className="group relative">
                   <input
                     type="text"
@@ -380,7 +366,7 @@ export default function LoginPage() {
                   <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#7086FD] transition-all duration-300 group-focus-within:w-full" />
                 </div>
 
-                {/* Champ Email */}
+                {/* Email Address */}
                 <div className="group relative">
                   <input
                     type="email"
@@ -394,7 +380,7 @@ export default function LoginPage() {
                   <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#7086FD] transition-all duration-300 group-focus-within:w-full" />
                 </div>
 
-                {/* Champ Mot de passe */}
+                {/* Password */}
                 <div className="group relative">
                   <input
                     type={showPassword ? "text" : "password"}
@@ -417,28 +403,28 @@ export default function LoginPage() {
                   <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#7086FD] transition-all duration-300 group-focus-within:w-full" />
                 </div>
 
-                {/* Sélecteur de devise sobre en pillules */}
+                {/* Sélecteur de devise */}
                 <div className="flex items-center gap-2 pt-1">
                   <span className="text-[11px] font-semibold text-slate-400">Devise :</span>
                   <div className="flex gap-1">
-                    {["EUR", "USD", "CHF", "CAD"].map((curr) => (
+                    {["EUR", "USD", "CHF", "CAD"].map((c) => (
                       <button
-                        key={curr}
+                        key={c}
                         type="button"
-                        onClick={() => setCurrency(curr)}
+                        onClick={() => setCurrency(c)}
                         className={`rounded-md px-2 py-0.5 text-[10px] font-bold transition-all cursor-pointer ${
-                          currency === curr
+                          currency === c
                             ? "bg-[#7086FD] text-white shadow-xs"
                             : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                         }`}
                       >
-                        {curr}
+                        {c}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Messages d'erreur et succès */}
+                {/* Messages de retour */}
                 {errorMessage && (
                   <div className="flex items-start gap-2 rounded-xl bg-red-50 p-2.5 text-[11px] font-medium text-red-800 border border-red-200">
                     <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
@@ -453,7 +439,7 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                {/* Bouton d'action vibrant */}
+                {/* Bouton Create Account */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -468,10 +454,10 @@ export default function LoginPage() {
               </form>
             )}
 
-            {/* Formulaire interactif Connexion */}
+            {/* Formulaire Connexion */}
             {mode === "signin" && (
               <form onSubmit={handleSignIn} className="space-y-4 transition-all duration-300">
-                {/* Champ Email */}
+                {/* Email Address */}
                 <div className="group relative">
                   <input
                     type="email"
@@ -485,7 +471,7 @@ export default function LoginPage() {
                   <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#7086FD] transition-all duration-300 group-focus-within:w-full" />
                 </div>
 
-                {/* Champ Mot de passe */}
+                {/* Password */}
                 <div className="group relative">
                   <input
                     type={showPassword ? "text" : "password"}
@@ -507,7 +493,7 @@ export default function LoginPage() {
                   <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#7086FD] transition-all duration-300 group-focus-within:w-full" />
                 </div>
 
-                {/* Messages d'erreur et succès */}
+                {/* Messages de retour */}
                 {errorMessage && (
                   <div className="flex items-start gap-2 rounded-xl bg-red-50 p-2.5 text-[11px] font-medium text-red-800 border border-red-200">
                     <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
@@ -522,7 +508,7 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                {/* Bouton d'action vibrant */}
+                {/* Bouton Sign In */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -537,8 +523,8 @@ export default function LoginPage() {
               </form>
             )}
 
-            {/* Lien interactif de bascule de mode */}
-            <div className="mt-6 text-center text-xs text-slate-500">
+            {/* Lien bascule (.login-link) */}
+            <div className="login-link mt-6 text-center text-xs text-slate-500">
               {mode === "signup" ? (
                 <p>
                   {t.hasAccount}{" "}
@@ -566,8 +552,8 @@ export default function LoginPage() {
           </div>
 
           <div />
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
