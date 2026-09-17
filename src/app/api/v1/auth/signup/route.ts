@@ -59,19 +59,9 @@ export async function POST(request: Request) {
 
     const { companyName, email, password, currency } = validationResult.data;
 
-    // 1. Vérifier si l'utilisateur existe déjà dans la base PostgreSQL Solvia
-    const existingUser = await prisma.user.findFirst({
-      where: { email },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "Un compte avec cette adresse email existe déjà. Veuillez vous connecter." },
-        { status: 409 },
-      );
-    }
-
-    // 2. Créer l'utilisateur dans Supabase Auth via le client Admin
+    // 1. Créer l'utilisateur dans Supabase Auth via le client Admin.
+    // Supabase garantit déjà l'unicité de l'e-mail, ce qui évite une requête
+    // PostgreSQL distante supplémentaire avant chaque inscription.
     const supabaseAdmin = getSupabaseAdminClient();
 
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -108,7 +98,7 @@ export async function POST(request: Request) {
 
     const authUserId = authUser.user.id;
 
-    // 3. Création atomique de l'Organisation, du Scoring et du profil User dans PostgreSQL
+    // 2. Création atomique de l'Organisation, du Scoring et du profil User dans PostgreSQL
     const newOrganization = await prisma.$transaction(async (tx) => {
       // A. Création de l'entité Entreprise / Organisation
       const org = await tx.organization.create({
