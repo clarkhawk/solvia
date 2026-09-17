@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export function BrandPanel() {
   return (
-    <section className="hidden xl:flex w-[50%] relative z-10 bg-[#062B5A] flex-col p-16 overflow-visible">
+    <section className="hidden xl:flex w-[50%] relative z-10 bg-[#062B5A] flex-col p-16 overflow-hidden">
       {/* Abstract Background Shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#07549A]/20 blur-[100px]" />
@@ -12,7 +12,7 @@ export function BrandPanel() {
       </div>
 
       {/* Top Header: Logo */}
-      <div className="relative z-10 flex flex-col items-start mb-6">
+      <div className="relative z-30 flex flex-col items-start mb-6">
         <Image 
           src="/logo_white_text_final.png" 
           alt="Solviaa" 
@@ -24,8 +24,8 @@ export function BrandPanel() {
       </div>
 
       {/* Main Title */}
-      <div className="relative z-10 flex flex-col items-start w-full mt-0">
-        <h1 className="text-[48px] font-bold leading-[1.05] text-white tracking-tight relative z-[60]">
+      <div className="relative z-30 flex flex-col items-start w-full mt-0">
+        <h1 className="text-[48px] font-bold leading-[1.05] text-white tracking-tight">
           Anticipez<br />
           l&apos;impayé,<br />
           <span className="text-[#08B9C8]">assurez l&apos;avenir.</span>
@@ -33,8 +33,8 @@ export function BrandPanel() {
       </div>
       
       {/* Bottom Illustration */}
-      <div className="absolute bottom-[-1rem] right-[-10rem] w-[130%] flex items-end justify-end pointer-events-none select-none z-50">
-        <div className="relative w-full max-w-[850px]">
+      <div className="absolute bottom-[-1rem] right-[-5rem] w-[115%] flex items-end justify-end pointer-events-none select-none z-20">
+        <div className="relative w-full max-w-[760px]">
           <Image 
             src="/images/solviaa-illustration.png" 
             alt="Illustration Solviaa" 

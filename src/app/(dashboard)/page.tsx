@@ -33,13 +33,25 @@ import {
  * Structure des données consolidées du tableau de bord.
  */
 interface DashboardData {
+  currency: string;
   counts: {
     upcoming: number;
     overdue: number;
     paid: number;
     partiallyPaid: number;
   };
-  dueSoon: Array<{
+  amounts: {
+    outstanding: number;
+    overdue: number;
+    collectedThisMonth: number;
+    collectionRate: number;
+  };
+  distribution: Array<{
+    status: string;
+    amount: number;
+    count: number;
+  }>;
+  priorityInvoices: Array<{
     id: string;
     reference: string;
     amount: number;
@@ -47,6 +59,14 @@ interface DashboardData {
     dueAt: string;
     status: string;
   }>;
+}
+
+function formatCurrency(amount: number, currency = "EUR") {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
 /**
@@ -142,15 +162,15 @@ export default function DashboardPage() {
           </div>
           <div className="mt-4">
             <span className="text-3xl font-bold tracking-tight text-[#EF4444]">
-              {loading ? "—" : data?.counts.overdue ?? 0}
+              {loading ? "—" : formatCurrency(data?.amounts.overdue ?? 0, data?.currency)}
             </span>
-            <span className="ml-1 text-xs text-[#64748B]">factures</span>
+            <span className="ml-1 text-xs text-[#64748B]">à recouvrer</span>
           </div>
           <div className="mt-3 flex items-center gap-1.5">
             <span className="rounded-md bg-[#FEF2F2] px-2 py-0.5 text-[10px] font-bold text-[#991B1B]">
               Action requise
             </span>
-            <span className="text-[11px] text-[#64748B]">Date limite dépassée</span>
+            <span className="text-[11px] text-[#64748B]">{data?.counts.overdue ?? 0} facture(s)</span>
           </div>
         </div>
 
@@ -164,15 +184,15 @@ export default function DashboardPage() {
           </div>
           <div className="mt-4">
             <span className="text-3xl font-bold tracking-tight text-[#0F172A]">
-              {loading ? "—" : data?.counts.upcoming ?? 0}
+              {loading ? "—" : formatCurrency(data?.amounts.outstanding ?? 0, data?.currency)}
             </span>
-            <span className="ml-1 text-xs text-[#64748B]">factures</span>
+            <span className="ml-1 text-xs text-[#64748B]">encours ouvert</span>
           </div>
           <div className="mt-3 flex items-center gap-1.5">
             <span className="rounded-md bg-[#EEF2FF] px-2 py-0.5 text-[10px] font-bold text-[#4F46E5]">
               Sous 30 jours
             </span>
-            <span className="text-[11px] text-[#64748B]">Échéances à surveiller</span>
+            <span className="text-[11px] text-[#64748B]">{data?.counts.upcoming ?? 0} échéance(s) à venir</span>
           </div>
         </div>
 
@@ -208,15 +228,15 @@ export default function DashboardPage() {
           </div>
           <div className="mt-4">
             <span className="text-3xl font-bold tracking-tight text-[#10B981]">
-              {loading ? "—" : data?.counts.paid ?? 0}
+              {loading ? "—" : formatCurrency(data?.amounts.collectedThisMonth ?? 0, data?.currency)}
             </span>
-            <span className="ml-1 text-xs text-[#64748B]">factures</span>
+            <span className="ml-1 text-xs text-[#64748B]">ce mois</span>
           </div>
           <div className="mt-3 flex items-center gap-1.5">
             <span className="rounded-md bg-[#ECFDF5] px-2 py-0.5 text-[10px] font-bold text-[#065F46]">
               Encaissement 100%
             </span>
-            <span className="text-[11px] text-[#64748B]">Règlement validé</span>
+            <span className="text-[11px] text-[#64748B]">Taux d&apos;encaissement : {data?.amounts.collectionRate ?? 0}%</span>
           </div>
         </div>
       </div>
@@ -247,7 +267,7 @@ export default function DashboardPage() {
           {/* Liste des échéances imminentes */}
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">
-              Prochaines échéances identifiées
+              Factures prioritaires
             </p>
 
             {loading ? (
@@ -255,8 +275,8 @@ export default function DashboardPage() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Chargement des données...
               </div>
-            ) : data?.dueSoon && data.dueSoon.length > 0 ? (
-              data.dueSoon.slice(0, 4).map((inv) => (
+            ) : data?.priorityInvoices && data.priorityInvoices.length > 0 ? (
+              data.priorityInvoices.slice(0, 4).map((inv) => (
                 <div
                   key={inv.id}
                   className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-3.5 transition-colors hover:bg-white/10"
@@ -274,7 +294,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-bold text-white">
-                      {inv.amountRemaining.toFixed(2)} EUR
+                      {formatCurrency(inv.amountRemaining, data.currency)}
                     </p>
                     <StatusBadge status={inv.status} />
                   </div>
@@ -287,20 +307,37 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Carte latérale de recommandations */}
+          {/* Répartition de l'encours et recommandations */}
           <div className="rounded-2xl bg-white/5 border border-white/10 p-5 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-2 text-white font-semibold text-xs">
                 <ShieldAlert className="h-4 w-4 text-[#F59E0B]" />
-                <span>Automatisation des relances</span>
+                <span>Répartition de l&apos;encours</span>
               </div>
-              <p className="text-xs text-[#94A3B8] leading-relaxed">
-                Solvia analyse l&apos;historique de chaque débiteur et adapte le ton de la relance (aimable, premier rappel, mise en demeure) selon le délai et le montant en jeu.
-              </p>
+              <div className="mt-4 space-y-3">
+                {data?.distribution.filter((item) => item.amount > 0).map((item) => {
+                  const label = item.status === "overdue" ? "En retard" : item.status === "partially_paid" ? "Partiellement réglées" : item.status === "upcoming" ? "À venir" : "Réglées";
+                  const width = data.amounts.outstanding > 0 ? Math.min(100, (item.amount / data.amounts.outstanding) * 100) : 0;
+                  return (
+                    <div key={item.status}>
+                      <div className="flex items-center justify-between gap-3 text-[11px]">
+                        <span className="text-[#CBD5E1]">{label} · {item.count}</span>
+                        <span className="font-semibold text-white">{formatCurrency(item.amount, data.currency)}</span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div className={item.status === "overdue" ? "h-full rounded-full bg-[#FB7185]" : item.status === "partially_paid" ? "h-full rounded-full bg-[#FBBF24]" : "h-full rounded-full bg-[#818CF8]"} style={{ width: `${width}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                {!loading && !data?.distribution.some((item) => item.amount > 0) && (
+                  <p className="text-xs leading-relaxed text-[#94A3B8]">Aucun encours ouvert : vos indicateurs apparaîtront après l&apos;import des premières factures.</p>
+                )}
+              </div>
             </div>
 
             <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
-              <span className="text-[11px] text-[#94A3B8]">Modèle BYOK disponible</span>
+              <span className="text-[11px] text-[#94A3B8]">Relances IA disponibles</span>
               <Link
                 href="/settings/ai-provider"
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#818CF8] hover:text-white"
@@ -331,8 +368,8 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-2.5">
-            {data?.dueSoon && data.dueSoon.length > 0 ? (
-              data.dueSoon.slice(0, 5).map((inv) => (
+            {data?.priorityInvoices && data.priorityInvoices.length > 0 ? (
+              data.priorityInvoices.slice(0, 5).map((inv) => (
                 <div
                   key={inv.id}
                   className="flex items-center justify-between rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3 transition-colors hover:bg-white"
@@ -345,7 +382,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-bold text-[#0F172A]">
-                      {inv.amountRemaining.toFixed(2)} EUR
+                      {formatCurrency(inv.amountRemaining, data.currency)}
                     </span>
                     <StatusBadge status={inv.status} />
                   </div>

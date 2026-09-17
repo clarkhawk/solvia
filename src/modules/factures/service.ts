@@ -1,8 +1,9 @@
 import { logAuditEvent } from "@/shared/audit/audit-log";
+import { prisma } from "@/shared/db/prisma";
 import { AppError } from "@/shared/errors/app-error";
 import { clientRepository } from "@/modules/clients/repository";
 import { invoiceRepository } from "./repository";
-import { computeInvoiceStatus } from "./status";
+import { computeInvoiceStatus, decimalToNumber } from "./status";
 import type { CreateInvoiceInput, InvoiceDTO, InvoiceFilters, UpdateInvoiceInput } from "./types";
 
 export class InvoiceService {
@@ -85,23 +86,78 @@ export class InvoiceService {
   }
 
   async getDashboardSummary(organizationId: string) {
-    const [upcoming, overdue, paid, partiallyPaid] = await Promise.all([
-      invoiceRepository.list(organizationId, 1, 1, { status: "upcoming" }),
-      invoiceRepository.list(organizationId, 1, 1, { status: "overdue" }),
-      invoiceRepository.list(organizationId, 1, 1, { status: "paid" }),
-      invoiceRepository.list(organizationId, 1, 1, { status: "partially_paid" }),
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const [statusGroups, priorityInvoices, monthPayments, organization] = await Promise.all([
+      prisma.invoice.groupBy({
+        by: ["status"],
+        where: { organizationId },
+        _count: { _all: true },
+        _sum: { amount: true, amountPaid: true },
+      }),
+      prisma.invoice.findMany({
+        where: { organizationId, status: { in: ["overdue", "partially_paid", "upcoming"] } },
+        orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
+        take: 6,
+      }),
+      prisma.payment.aggregate({
+        where: { organizationId, paidAt: { gte: monthStart } },
+        _sum: { amount: true },
+      }),
+      prisma.organization.findUnique({ where: { id: organizationId }, select: { currency: true } }),
     ]);
 
-    const dueSoon = await invoiceRepository.list(organizationId, 1, 10, { status: "upcoming" });
+    const byStatus = Object.fromEntries(
+      statusGroups.map((group) => [
+        group.status,
+        {
+          count: group._count._all,
+          amount: decimalToNumber(group._sum.amount ?? 0),
+          paid: decimalToNumber(group._sum.amountPaid ?? 0),
+        },
+      ]),
+    ) as Record<string, { count: number; amount: number; paid: number }>;
+
+    const activeStatuses = ["upcoming", "overdue", "partially_paid", "paid"];
+    const totals = activeStatuses.reduce(
+      (summary, status) => {
+        const group = byStatus[status] ?? { count: 0, amount: 0, paid: 0 };
+        return {
+          invoiceAmount: summary.invoiceAmount + group.amount,
+          paidAmount: summary.paidAmount + group.paid,
+        };
+      },
+      { invoiceAmount: 0, paidAmount: 0 },
+    );
+    const outstandingAmount = Math.max(0, totals.invoiceAmount - totals.paidAmount);
 
     return {
+      currency: organization?.currency ?? "EUR",
       counts: {
-        upcoming: upcoming.total,
-        overdue: overdue.total,
-        paid: paid.total,
-        partiallyPaid: partiallyPaid.total,
+        upcoming: byStatus.upcoming?.count ?? 0,
+        overdue: byStatus.overdue?.count ?? 0,
+        paid: byStatus.paid?.count ?? 0,
+        partiallyPaid: byStatus.partially_paid?.count ?? 0,
       },
-      dueSoon: dueSoon.items,
+      amounts: {
+        outstanding: outstandingAmount,
+        overdue: Math.max(0, (byStatus.overdue?.amount ?? 0) - (byStatus.overdue?.paid ?? 0)),
+        collectedThisMonth: decimalToNumber(monthPayments._sum.amount ?? 0),
+        collectionRate: totals.invoiceAmount > 0 ? Math.round((totals.paidAmount / totals.invoiceAmount) * 100) : 0,
+      },
+      distribution: activeStatuses.map((status) => ({
+        status,
+        amount: Math.max(0, (byStatus[status]?.amount ?? 0) - (byStatus[status]?.paid ?? 0)),
+        count: byStatus[status]?.count ?? 0,
+      })),
+      priorityInvoices: priorityInvoices.map((invoice) => ({
+        id: invoice.id,
+        reference: invoice.reference,
+        amount: decimalToNumber(invoice.amount),
+        amountRemaining: Math.max(0, decimalToNumber(invoice.amount) - decimalToNumber(invoice.amountPaid)),
+        dueAt: invoice.dueAt,
+        status: invoice.status,
+      })),
     };
   }
 }
