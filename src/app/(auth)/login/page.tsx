@@ -4,7 +4,7 @@ import { LanguageSelector } from "@/components/auth/LanguageSelector";
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-[100vh] w-full flex-col xl:flex-row bg-[#F8FAFC] xl:bg-white overflow-y-auto xl:overflow-hidden">
+    <main className="flex min-h-[100vh] w-full flex-col xl:flex-row bg-[#F8FAFC] xl:bg-white overflow-y-auto xl:overflow-x-visible">
       
       {/* ========================================================= */}
       {/* LEFT PANEL - BRANDING (Desktop Only) */}

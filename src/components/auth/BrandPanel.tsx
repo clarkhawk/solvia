@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export function BrandPanel() {
   return (
-    <section className="hidden xl:flex w-[50%] relative z-10 bg-[#062B5A] flex-col p-16 overflow-hidden">
+    <section className="hidden xl:flex w-[50%] relative z-10 bg-[#062B5A] flex-col p-16 overflow-visible">
       {/* Abstract Background Shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#07549A]/20 blur-[100px]" />
@@ -33,8 +33,8 @@ export function BrandPanel() {
       </div>
       
       {/* Bottom Illustration */}
-      <div className="absolute bottom-[-1rem] right-[-5rem] w-[115%] flex items-end justify-end pointer-events-none select-none z-20">
-        <div className="relative w-full max-w-[760px]">
+      <div className="absolute bottom-[-0.5rem] right-[-3.25rem] w-[94%] flex items-end justify-end pointer-events-none select-none z-40">
+        <div className="relative w-full max-w-[680px]">
           <Image 
             src="/images/solviaa-illustration.png" 
             alt="Illustration Solviaa" 
