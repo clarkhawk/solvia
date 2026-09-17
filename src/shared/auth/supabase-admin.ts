@@ -23,17 +23,14 @@ export function getSupabaseAdminClient() {
     throw new Error("Configuration manquante : NEXT_PUBLIC_SUPABASE_URL n'est pas définie.");
   }
 
-  // En priorité la clé secrète service_role, avec fallback sur la clé anon
-  const key = serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!key) {
-    throw new Error("Configuration manquante : aucune clé Supabase (SERVICE_ROLE ou ANON) n'est définie.");
+  if (!serviceRoleKey) {
+    throw new Error("Configuration manquante : SUPABASE_SERVICE_ROLE_KEY n'est pas définie.");
   }
 
-  return createClient(url, key, {
+  return createClient(url, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
 }
-

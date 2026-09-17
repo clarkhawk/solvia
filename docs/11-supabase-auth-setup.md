@@ -56,8 +56,17 @@ Le code utilise `NEXT_PUBLIC_SUPABASE_ANON_KEY` (clé `anon` JWT), pas uniquemen
 | Route / Fichier | Rôle |
 |---|---|
 | `/login` | `signInWithPassword` |
+| `/signup` | Création d'une organisation et de son premier administrateur |
 | `/auth/callback` | Confirmation email / OAuth |
 | `middleware.ts` | Garde session + redirect |
 | `getAuthContext()` | Session → user DB → RBAC |
 
 Voir aussi [08-auth-rbac.md](./08-auth-rbac.md).
+
+## Inscription d'une nouvelle entreprise
+
+L'utilisateur ouvre `/signup`, renseigne le nom de l'entreprise, son email, son mot de passe et sa devise, puis est redirigé vers `/login`.
+
+La route crée le compte dans **Supabase Auth** et crée dans PostgreSQL l'organisation, le profil administrateur applicatif et la configuration de scoring initiale. Le mot de passe n'est jamais écrit dans la table applicative `users` : Supabase Auth le conserve de façon sécurisée.
+
+`SUPABASE_SERVICE_ROLE_KEY` est obligatoire côté serveur pour ce parcours et ne doit jamais être exposée au navigateur.
