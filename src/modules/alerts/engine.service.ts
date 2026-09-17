@@ -58,16 +58,20 @@ export class AlertEngineService {
       const existing = await prisma.alertEvent.findUnique({
         where: { invoiceId_alertType: { invoiceId: invoice.id, alertType } },
       });
-      if (existing) continue;
+      if (existing?.status === "sent") continue;
 
-      await prisma.alertEvent.create({
-        data: {
-          organizationId,
-          invoiceId: invoice.id,
-          alertType,
-          status: "pending",
-        },
-      });
+      if (existing) {
+        await prisma.alertEvent.update({ where: { id: existing.id }, data: { status: "pending" } });
+      } else {
+        await prisma.alertEvent.create({
+          data: {
+            organizationId,
+            invoiceId: invoice.id,
+            alertType,
+            status: "pending",
+          },
+        });
+      }
 
       const client = await clientRepository.findById(organizationId, invoice.clientId);
       const payload: AlertNotificationPayload = {
@@ -79,39 +83,43 @@ export class AlertEngineService {
         alertType,
       };
 
-      await this.notifyTeam(organizationId, payload);
+      const delivered = await this.notifyTeam(organizationId, payload);
       alertCount++;
 
       await prisma.alertEvent.updateMany({
         where: { invoiceId: invoice.id, alertType },
-        data: { status: "sent" },
+        data: { status: delivered ? "sent" : "failed" },
       });
     }
 
     return alertCount;
   }
 
-  private async notifyTeam(organizationId: string, payload: AlertNotificationPayload): Promise<void> {
+  private async notifyTeam(organizationId: string, payload: AlertNotificationPayload): Promise<boolean> {
     const users = await prisma.user.findMany({
       where: { organizationId, canReceiveAlerts: true },
       include: { notificationPreference: true },
     });
 
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       users.map(async (user) => {
+        let delivered = false;
         const prefs = user.notificationPreference ?? { inApp: true, email: true, whatsapp: false };
 
         if (prefs.inApp) {
           await this.inApp.send(organizationId, user.id, payload);
+          delivered = true;
         }
         if (prefs.email) {
-          await this.email.send(user.email, payload);
+          delivered = (await this.email.send(user.email, payload)) || delivered;
         }
         if (prefs.whatsapp && user.notificationPreference?.whatsappNumberEncrypted) {
-          await this.whatsapp.send(user.notificationPreference.whatsappNumberEncrypted, payload);
+          delivered = (await this.whatsapp.send(user.notificationPreference.whatsappNumberEncrypted, payload)) || delivered;
         }
+        return delivered;
       }),
     );
+    return results.some((result) => result.status === "fulfilled" && result.value);
   }
 }
 

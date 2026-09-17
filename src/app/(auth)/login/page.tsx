@@ -1,4 +1,5 @@
 import { BrandPanel } from "@/components/auth/BrandPanel";
+import Image from "next/image";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { LanguageSelector } from "@/components/auth/LanguageSelector";
 
@@ -21,7 +22,7 @@ export default function LoginPage() {
 
         {/* Mobile Header (Hidden on Desktop) */}
         <div className="flex xl:hidden items-center justify-center pt-16 pb-4">
-          <img src="/logo.png" alt="Solviaa" className="h-16 w-auto object-contain" />
+          <Image src="/logo.png" alt="Solviaa" width={160} height={64} className="h-16 w-auto object-contain" />
         </div>
 
         {/* Form Container */}

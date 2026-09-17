@@ -10,6 +10,7 @@
  */
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/shared/auth/supabase-browser";
@@ -23,7 +24,6 @@ import {
   ShieldCheck,
   Bot,
   LogOut,
-  Shield,
   HelpCircle,
 } from "lucide-react";
 
@@ -69,7 +69,7 @@ export function Sidebar() {
     <aside className="flex h-screen w-64 flex-col border-r border-[#E2E8F0] bg-white">
       {/* En-tête avec Logo Solvia */}
       <div className="flex h-16 items-center gap-2.5 border-b border-[#E2E8F0] px-6">
-        <img src="/logo.png" alt="Solviaa" className="h-8 w-auto object-contain" />
+        <Image src="/logo.png" alt="Solviaa" width={128} height={32} className="h-8 w-auto object-contain" />
       </div>
 
       {/* Navigation principale */}

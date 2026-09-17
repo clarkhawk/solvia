@@ -43,6 +43,13 @@ export class InvoiceService {
     const existing = await this.getById(organizationId, id);
 
     const amount = input.amount ?? existing.amount;
+    if (amount < existing.amountPaid) {
+      throw new AppError(
+        "Invoice amount cannot be lower than the amount already paid",
+        400,
+        "AMOUNT_BELOW_PAID",
+      );
+    }
     const dueAt = input.dueAt ?? existing.dueAt;
     const status = computeInvoiceStatus(amount, existing.amountPaid, dueAt, input.status);
 

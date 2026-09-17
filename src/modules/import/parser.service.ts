@@ -3,6 +3,8 @@ import * as XLSX from "xlsx";
 import type { ImportColumnMapping, ImportRow } from "./types";
 import { FIXED_TEMPLATE_COLUMNS } from "./types";
 
+export const MAX_IMPORT_ROWS = 5_000;
+
 function normalizeHeader(h: string): string {
   return h.trim().toLowerCase().replace(/\s+/g, "_");
 }
@@ -24,6 +26,9 @@ export class ImportParserService {
       throw new Error(`CSV parse error: ${parsed.errors[0].message}`);
     }
 
+    if (parsed.data.length > MAX_IMPORT_ROWS) {
+      throw new Error(`Import limit exceeded: maximum ${MAX_IMPORT_ROWS} rows`);
+    }
     return this.mapRows(parsed.data, mapping);
   }
 
@@ -31,6 +36,9 @@ export class ImportParserService {
     const workbook = XLSX.read(buffer, { type: "array" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json<Record<string, string>>(sheet);
+    if (data.length > MAX_IMPORT_ROWS) {
+      throw new Error(`Import limit exceeded: maximum ${MAX_IMPORT_ROWS} rows`);
+    }
     return this.mapRows(data, mapping);
   }
 

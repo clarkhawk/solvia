@@ -89,6 +89,12 @@ enum InvitationStatus {
   expired
 }
 
+enum JoinRequestStatus {
+  pending
+  approved
+  rejected
+}
+
 model Organization {
   id              String           @id @default(uuid())
   name            String
@@ -108,8 +114,26 @@ model Organization {
   alertEvents     AlertEvent[]
   inAppNotifications InAppNotification[]
   invitations     Invitation[]
+  joinRequests    JoinRequest[]
 
   @@map("organizations")
+}
+
+model JoinRequest {
+  id              String            @id @default(uuid())
+  organizationId  String            @map("organization_id")
+  authUserId      String            @map("auth_user_id")
+  email           String
+  status          JoinRequestStatus @default(pending)
+  reviewedById    String?           @map("reviewed_by_id")
+  reviewedAt      DateTime?         @map("reviewed_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, authUserId])
+  @@index([organizationId, status])
+  @@map("join_requests")
 }
 
 model User {
@@ -172,6 +196,7 @@ model Invoice {
 
   @@index([organizationId, dueAt, status])
   @@index([organizationId, clientId, status])
+  @@unique([organizationId, reference])
   @@map("invoices")
 }
 

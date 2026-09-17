@@ -1,6 +1,7 @@
 import { logAuditEvent } from "@/shared/audit/audit-log";
 import { clientService } from "@/modules/clients/service";
 import { invoiceService } from "@/modules/factures/service";
+import { prisma } from "@/shared/db/prisma";
 import type { ImportResult, ImportRow } from "./types";
 
 export class ImportMapperService {
@@ -26,6 +27,15 @@ export class ImportMapperService {
 
         if (created) result.clientsCreated++;
         else result.clientsExisting++;
+
+        const duplicate = await prisma.invoice.findFirst({
+          where: { organizationId, reference: row.invoiceReference },
+          select: { id: true },
+        });
+        if (duplicate) {
+          result.errors.push({ row: i + 2, message: "Invoice reference already exists; row skipped" });
+          continue;
+        }
 
         await invoiceService.create(organizationId, userId, {
           clientId: client.id,

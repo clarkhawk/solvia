@@ -4,8 +4,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/shared/db/prisma";
 
 /**
- * OAuth callbacks never create an organisation or elevate a role. Accounts must
- * first be provisioned by the admin invitation flow, preventing orphan sessions.
+ * OAuth proves identity only. A user without membership is sent to the join
+ * request page; the organization administrator remains the approval authority.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -27,8 +27,7 @@ export async function GET(request: Request) {
 
   const user = await prisma.user.findUnique({ where: { authUserId: data.user.id }, select: { id: true } });
   if (!user) {
-    await supabase.auth.signOut();
-    return NextResponse.redirect(`${origin}/login?error=account_not_provisioned`);
+    return NextResponse.redirect(`${origin}/join`);
   }
   return NextResponse.redirect(`${origin}${next}`);
 }

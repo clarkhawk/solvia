@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/shared/auth/supabase-browser";
 import { Mail, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { PasswordInput } from "./PasswordInput";
+import { SocialLoginButtons } from "./SocialLoginButtons";
 
 export function LoginForm() {
   const router = useRouter();
@@ -39,6 +40,19 @@ export function LoginForm() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=/` },
+    });
+    if (error) {
+      setError("La connexion avec Google est momentanément indisponible.");
+      setLoading(false);
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyName || !email || !password) return;
@@ -56,7 +70,14 @@ export function LoginForm() {
       setLoading(false);
       return;
     }
-    router.push("/login?created=1");
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      setError("Compte créé. Connectez-vous avec vos identifiants.");
+      setLoading(false);
+      return;
+    }
+    router.push("/");
+    router.refresh();
   };
 
   function switchMode(nextMode: "login" | "signup") {
@@ -174,6 +195,16 @@ export function LoginForm() {
         </button>
         </div>}
       </form>
+
+      {mode === "login" && (
+        <>
+          <div className="relative my-8 flex items-center justify-center">
+            <div className="absolute inset-0 flex w-full items-center"><div className="w-full border-t border-[#E2E8F0]" /></div>
+            <span className="relative z-10 bg-white px-4 text-sm font-medium text-[#64748B]">ou continuer avec</span>
+          </div>
+          <SocialLoginButtons onGoogleLogin={() => void handleGoogleLogin()} disabled={loading} />
+        </>
+      )}
 
       {/* Footer Text */}
       <div className="mt-12 text-center">

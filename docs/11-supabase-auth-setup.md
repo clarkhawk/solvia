@@ -19,6 +19,15 @@ Sans entrée dans `users` → `403 USER_NOT_FOUND` sur l'API.
 
 [Authentication → Providers → Email](https://supabase.com/dashboard/project/bgrwqqwfxvrocxdzhhef/auth/providers) — activer Email.
 
+### Google OAuth
+
+1. Dans Google Cloud Console, créer un client OAuth Web et ajouter l'URL de rappel fournie par Supabase :
+   `https://bgrwqqwfxvrocxdzhhef.supabase.co/auth/v1/callback`.
+2. Dans **Authentication → Providers → Google** de Supabase, activer Google et renseigner le Client ID et le Client Secret Google.
+3. Conserver `https://solviaa.vercel.app/auth/callback` dans les Redirect URLs ci-dessous.
+
+Le bouton Google est disponible sur `/login`. Après le retour OAuth, Solviaa vérifie que le compte Supabase est déjà rattaché à un utilisateur et à une organisation. Les comptes doivent donc être créés par l'inscription Solviaa ou une invitation avant leur première connexion Google ; cela évite toute session sans organisation ni permissions.
+
 ### URLs (production)
 
 [Authentication → URL Configuration](https://supabase.com/dashboard/project/bgrwqqwfxvrocxdzhhef/auth/url-configuration)

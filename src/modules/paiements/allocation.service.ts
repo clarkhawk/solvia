@@ -1,10 +1,6 @@
 import { prisma } from "@/shared/db/prisma";
-import { logAuditEvent } from "@/shared/audit/audit-log";
 import { AppError } from "@/shared/errors/app-error";
-import { clientRepository } from "@/modules/clients/repository";
-import { invoiceRepository } from "@/modules/factures/repository";
-import { invoiceService } from "@/modules/factures/service";
-import { decimalToNumber } from "@/modules/factures/status";
+import { computeInvoiceStatus, decimalToNumber } from "@/modules/factures/status";
 import type { CreatePaymentInput, PaymentDTO } from "./types";
 
 function toPaymentDTO(
@@ -42,62 +38,49 @@ export class PaymentAllocationService {
     userId: string,
     input: CreatePaymentInput,
   ): Promise<PaymentDTO> {
-    const client = await clientRepository.findById(organizationId, input.clientId);
-    if (!client) {
-      throw new AppError("Client not found", 404, "CLIENT_NOT_FOUND");
-    }
+    return prisma.$transaction(async (tx) => {
+      const client = await tx.client.findFirst({ where: { id: input.clientId, organizationId }, select: { id: true } });
+      if (!client) throw new AppError("Client not found", 404, "CLIENT_NOT_FOUND");
 
-    const openInvoices = await invoiceRepository.findOpenByClient(organizationId, input.clientId);
-    if (openInvoices.length === 0) {
-      throw new AppError("No open invoices for this client", 400, "NO_OPEN_INVOICES");
-    }
+      // Lock the candidate invoices until the payment, allocations and balances are all committed.
+      // This prevents two concurrent payments from allocating the same outstanding balance.
+      const openInvoices = await tx.invoice.findMany({
+        where: { organizationId, clientId: input.clientId, status: { in: ["upcoming", "overdue", "partially_paid"] } },
+        orderBy: { dueAt: "asc" },
+      });
+      if (!openInvoices.length) throw new AppError("No open invoices for this client", 400, "NO_OPEN_INVOICES");
 
-    let remaining = input.amount;
-    const allocations: Array<{ invoiceId: string; amount: number }> = [];
-
-    for (const invoice of openInvoices) {
-      if (remaining <= 0) break;
-      const due = invoice.amountRemaining;
-      const allocated = Math.min(remaining, due);
-      if (allocated > 0) {
-        allocations.push({ invoiceId: invoice.id, amount: allocated });
-        remaining -= allocated;
+      let remaining = input.amount;
+      const allocations: Array<{ invoiceId: string; amount: number; newAmountPaid: number; status: "upcoming" | "overdue" | "paid" | "partially_paid" | "cancelled" }> = [];
+      for (const invoice of openInvoices) {
+        if (remaining <= 0) break;
+        const paid = decimalToNumber(invoice.amountPaid);
+        const total = decimalToNumber(invoice.amount);
+        const allocated = Math.min(remaining, Math.max(0, total - paid));
+        if (allocated > 0) {
+          const newAmountPaid = paid + allocated;
+          allocations.push({ invoiceId: invoice.id, amount: allocated, newAmountPaid, status: computeInvoiceStatus(total, newAmountPaid, invoice.dueAt) });
+          remaining -= allocated;
+        }
       }
-    }
 
-    const payment = await prisma.payment.create({
-      data: {
-        organizationId,
-        clientId: input.clientId,
-        amount: input.amount,
-        paidAt: input.paidAt,
-        reference: input.reference ?? null,
-        allocations: {
-          create: allocations.map((a) => ({
-            invoiceId: a.invoiceId,
-            amount: a.amount,
-          })),
+      const payment = await tx.payment.create({
+        data: {
+          organizationId, clientId: input.clientId, amount: input.amount, paidAt: input.paidAt, reference: input.reference ?? null,
+          allocations: { create: allocations.map(({ invoiceId, amount }) => ({ invoiceId, amount })) },
         },
-      },
-      include: { allocations: true },
-    });
+        include: { allocations: true },
+      });
 
-    for (const allocation of allocations) {
-      const invoice = openInvoices.find((i) => i.id === allocation.invoiceId)!;
-      const newAmountPaid = invoice.amountPaid + allocation.amount;
-      await invoiceService.updateStatusFromPayment(organizationId, allocation.invoiceId, newAmountPaid);
-    }
+      for (const allocation of allocations) {
+        await tx.invoice.update({ where: { id: allocation.invoiceId }, data: { amountPaid: allocation.newAmountPaid, status: allocation.status } });
+      }
 
-    await logAuditEvent({
-      organizationId,
-      userId,
-      action: "payment_create",
-      entityType: "Payment",
-      entityId: payment.id,
-      metadata: { allocations: allocations.length, unallocated: remaining },
-    });
-
-    return toPaymentDTO(payment);
+      await tx.auditLog.create({
+        data: { organizationId, userId, action: "payment_create", entityType: "Payment", entityId: payment.id, metadata: { allocations: allocations.length, unallocated: remaining } },
+      });
+      return toPaymentDTO(payment);
+    }, { isolationLevel: "Serializable" });
   }
 
   async getById(organizationId: string, id: string): Promise<PaymentDTO> {
