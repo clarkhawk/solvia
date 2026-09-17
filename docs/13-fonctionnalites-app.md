@@ -22,10 +22,10 @@ Connexion → import CSV/Excel ou création via API → clients + factures
 | Connexion | Se connecter avec email/mot de passe, Google ou GitHub ; se déconnecter | Opérationnel, sous réserve de la configuration Supabase des fournisseurs OAuth |
 | Tableau de bord | Voir les compteurs de factures en retard, à venir, partiellement payées et payées ; consulter les prochaines échéances et les clients à risque | Opérationnel |
 | Import | Télécharger des modèles CSV/XLSX, déposer ou choisir un CSV/XLS/XLSX, lancer l'import et consulter le bilan/liste des lignes en erreur | Opérationnel |
-| Clients | Consulter la liste des débiteurs, leurs coordonnées, leur code, le nombre de factures, le reste dû et leur score de risque | Lecture opérationnelle |
-| Factures | Consulter la liste des factures, leur montant, solde, échéance et statut ; ouvrir une fiche détaillée | Lecture opérationnelle |
-| Fiche facture | Voir le client, les montants total/payé/restant, les dates, le statut et le risque client | Lecture opérationnelle |
-| Relances | Consulter l'historique des relances, leur canal, niveau, résultat, brouillon et date | Lecture opérationnelle |
+| Clients | Rechercher, créer, modifier, supprimer et consulter les débiteurs, leurs coordonnées, leur code, leurs factures, le reste dû et leur score de risque | Opérationnel |
+| Factures | Créer, consulter, modifier et supprimer les factures ; accéder à leur fiche détaillée | Opérationnel |
+| Fiche facture | Voir le client, les montants total/payé/restant, les dates, le statut et le risque client ; enregistrer un paiement et une relance | Opérationnel |
+| Relances | Consulter l'historique des relances, leur canal, niveau, résultat, brouillon et date ; composer, générer et enregistrer une relance depuis une facture | Opérationnel |
 | Scoring | Activer/désactiver des critères, modifier leur nom, métrique et poids, fixer le seuil de risque puis enregistrer | Opérationnel pour les rôles autorisés |
 | Équipe | Consulter les membres et autoriser chacun à recevoir les alertes ou à gérer les relances | Opérationnel pour l'administrateur |
 | IA / BYOK | Choisir OpenAI, Gemini, Anthropic ou Grok et enregistrer la clé de l'organisation | Opérationnel pour les rôles autorisés |
@@ -53,7 +53,7 @@ Connexion → import CSV/Excel ou création via API → clients + factures
 - L'API permet d'enregistrer un paiement avec date, montant, client et référence optionnelle.
 - Un paiement est affecté automatiquement selon une règle **FIFO** : les factures ouvertes les plus anciennes sont réglées en premier.
 - L'affectation met à jour les montants payés et les statuts des factures concernées, y compris les paiements partiels.
-- La liste/historique détaillé des paiements n'est pas encore rendu dans l'interface de la fiche facture, même si le modèle et l'API existent.
+- La fiche facture affiche les paiements affectés à la facture.
 
 ## Import de données
 
@@ -72,7 +72,7 @@ Connexion → import CSV/Excel ou création via API → clients + factures
 - Les niveaux disponibles sont : relance aimable, rappel 1, rappel 2 et mise en demeure.
 - Pour chaque relance, le résultat peut être suivi : réponse reçue, promesse de paiement, à suivre, paiement reçu ou absence de réponse.
 - L'API permet de créer, consulter et modifier les relances.
-- L'interface présente l'historique, et la fiche facture propose un composeur visuel de relance.
+- L'interface présente l'historique, et la fiche facture permet de créer une relance, générer son brouillon IA, le sauvegarder puis la marquer comme envoyée manuellement.
 
 ### Génération IA (BYOK)
 
@@ -122,19 +122,12 @@ Connexion → import CSV/Excel ou création via API → clients + factures
 
 Ces éléments ne doivent pas être présentés comme utilisables de bout en bout aujourd'hui :
 
-- Le bouton **« Ajouter un client »** et la recherche de clients sont visuels, mais ne sont pas branchés à une création/filtrage dans la page actuelle.
-- La recherche globale du bandeau et la cloche de notifications sont visuelles ; aucune liste de notifications n'est affichée.
-- La fiche facture affiche un composeur de relance et les boutons « Générer IA » / « Envoyer », mais ceux-ci ne déclenchent pas encore les routes API de création, génération ou envoi.
-- L'historique de paiements de la fiche facture est encore un emplacement réservé.
-- L'interface ne propose pas encore les formulaires de création/édition/suppression pour clients, factures, paiements et relances, bien que l'API métier les supporte.
-- Il n'existe pas de page de détail client dans l'arborescence des pages, malgré le lien affiché depuis la liste des clients.
+- La recherche globale du bandeau n'est pas encore branchée à une recherche transversale.
 - Le sélecteur de langue ne traduit pas encore l'interface.
-- L'inscription d'entreprise existe côté API, mais aucun écran d'inscription n'est présent dans les pages actuelles.
-- Les notifications in-app sont créées par le moteur d'alertes, mais leur consultation n'est pas encore implémentée côté interface.
+- L'interface de liste des relances n'offre pas encore l'édition directe ; celle-ci se fait depuis la fiche facture.
 
 ## Hors périmètre V1
 
 - Application mobile ou desktop native.
 - Envoi automatique de relances aux clients.
 - Scoring fondé sur du machine learning, fine-tuning ou classification automatique des réponses.
-

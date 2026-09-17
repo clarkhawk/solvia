@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/shared/auth/supabase-browser";
 import { Mail, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { PasswordInput } from "./PasswordInput";
@@ -32,7 +33,7 @@ export function LoginForm() {
       setError("Email ou mot de passe incorrect.");
       setLoading(false);
     } else {
-      router.push("/dashboard");
+      router.push("/");
     }
   };
 
@@ -155,6 +156,9 @@ export function LoginForm() {
           <a href="/cgu" className="text-[#4F46E5] hover:underline font-semibold">
             CGU
           </a>
+        </p>
+        <p className="mt-3 text-[14px] font-medium text-[#64748B]">
+          Pas encore de compte ? <Link href="/signup" className="font-semibold text-[#4F46E5] hover:underline">Créer votre espace</Link>
         </p>
       </div>
       

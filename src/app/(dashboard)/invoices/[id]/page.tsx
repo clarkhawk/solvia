@@ -1,228 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { Bot, Send } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { Bot, Pencil, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { RiskBadge } from "@/components/dashboard/risk-badge";
 import type { InvoiceDTO } from "@/modules/factures/types";
 import type { ClientDTO } from "@/modules/clients/types";
+import type { PaymentDTO } from "@/modules/paiements/types";
 
 export default function InvoiceDetailPage() {
-  const params = useParams();
-  const id = params?.id as string;
-  
-  const [invoice, setInvoice] = useState<InvoiceDTO | null>(null);
-  const [client, setClient] = useState<ClientDTO | null>(null);
-  const [riskScore, setRiskScore] = useState<number>(0);
-  
-  const [loading, setLoading] = useState(true);
-
-  const [relanceChannel, setRelanceChannel] = useState("whatsapp");
-  const [relanceLevel, setRelanceLevel] = useState("aimable");
-  const [messageDraft, setMessageDraft] = useState(
-    "Bonjour,\n\nSauf erreur ou omission de notre part, il semblerait que la facture reste à ce jour impayée. Nous vous saurions gré de bien vouloir procéder à son règlement dans les meilleurs délais.\n\nCordialement."
-  );
-
-  useEffect(() => {
-    async function loadData() {
-      if (!id) return;
-      try {
-        const invRes = await fetch(`/api/v1/invoices/${id}`);
-        const invData = await invRes.json();
-        setInvoice(invData);
-
-        if (invData?.clientId) {
-          const [clientRes, scoringRes] = await Promise.all([
-            fetch(`/api/v1/clients/${invData.clientId}`),
-            fetch("/api/v1/scoring/clients")
-          ]);
-          
-          if (clientRes.ok) {
-            setClient(await clientRes.json());
-          }
-          
-          if (scoringRes.ok) {
-            const scoringData = await scoringRes.json();
-            const scoreEntry = scoringData.find((s: { clientId: string, result: { score: number } }) => s.clientId === invData.clientId);
-            if (scoreEntry) {
-              setRiskScore(scoreEntry.result.score);
-            }
-          }
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, [id]);
-
-  if (loading) {
-    return <div className="text-sm text-[#64748B] p-6">Chargement des détails...</div>;
-  }
-
-  if (!invoice) {
-    return <div className="text-sm text-[#EF4444] p-6">Facture introuvable.</div>;
-  }
-
-  return (
-    <div className="flex flex-col lg:flex-row gap-6 max-w-[1280px] mx-auto">
-      
-      {/* LEFT PANEL - 65% */}
-      <div className="w-full lg:w-[65%] space-y-6">
-        <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
-          <div className="flex items-start justify-between border-b border-[#E2E8F0] pb-6 mb-6">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-[#0F172A] mb-2">
-                Détail de Facture
-              </h2>
-              <p className="text-sm font-mono text-[#64748B]">{invoice.reference}</p>
-            </div>
-            <StatusBadge status={invoice.status} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <div>
-                <p className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">Client</p>
-                <p className="text-sm font-bold text-[#0F172A]">{client?.identity.name ?? "Inconnu"}</p>
-                <p className="text-xs text-[#64748B] mt-1">{client?.contact.email ?? "—"}</p>
-                <p className="text-xs text-[#64748B]">{client?.contact.phone ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">Émission</p>
-                <p className="text-sm font-medium text-[#0F172A]">
-                  {new Date(invoice.issuedAt).toLocaleDateString("fr-FR")}
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">Échéance</p>
-                <p className="text-sm font-medium text-[#0F172A]">
-                  {new Date(invoice.dueAt).toLocaleDateString("fr-FR")}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] p-4 text-right">
-                <p className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">Montant Total</p>
-                <p className="text-2xl font-bold text-[#0F172A] mb-4">
-                  {invoice.amount.toFixed(2)} €
-                </p>
-                
-                <div className="space-y-2 border-t border-[#E2E8F0] pt-4">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-[#64748B]">Montant Payé</span>
-                    <span className="font-semibold text-[#10B981]">{invoice.amountPaid.toFixed(2)} €</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-[#64748B]">Reste Dû</span>
-                    <span className="font-bold text-[#EF4444]">{invoice.amountRemaining.toFixed(2)} €</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] p-4 flex justify-between items-center">
-                <p className="text-xs font-semibold text-[#0F172A]">Scoring IA Client</p>
-                <RiskBadge score={riskScore} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
-          <h3 className="text-sm font-bold text-[#0F172A] mb-4">Historique de Paiements</h3>
-          {invoice.amountPaid > 0 ? (
-            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
-              <p className="text-xs text-[#64748B] italic">Historique des paiements alloués apparaîtra ici.</p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-8 text-center text-xs text-[#94A3B8]">
-              Aucun paiement enregistré pour cette facture.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* RIGHT PANEL - 35% */}
-      <div className="w-full lg:w-[35%]">
-        <div className="sticky top-24 rounded-2xl border border-[#1E1B4B]/10 bg-[#1E1B4B] p-6 shadow-md text-white">
-          <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <span className="rounded-md bg-white/10 p-1.5"><Send className="h-4 w-4" /></span>
-            Relance Composer
-          </h3>
-
-          <div className="space-y-6">
-            {/* Canaux */}
-            <div>
-              <label className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-2 block">Canal d&apos;envoi</label>
-              <div className="flex gap-2">
-                {[
-                  { id: "whatsapp", label: "WhatsApp", activeClass: "bg-[#10B981] text-white border-[#10B981]" },
-                  { id: "email", label: "Email", activeClass: "bg-[#4F46E5] text-white border-[#4F46E5]" },
-                  { id: "phone", label: "Téléphone", activeClass: "bg-[#0F172A] text-white border-[#0F172A]" }
-                ].map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setRelanceChannel(c.id)}
-                    className={`flex-1 rounded-xl border px-3 py-2 text-xs font-semibold transition-all ${
-                      relanceChannel === c.id ? c.activeClass : "border-white/20 bg-white/5 text-[#CBD5E1] hover:bg-white/10"
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Niveau */}
-            <div>
-              <label className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-2 block">Ton de la relance</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: "aimable", label: "Aimable" },
-                  { id: "rappel_1", label: "Rappel 1" },
-                  { id: "rappel_2", label: "Rappel 2" },
-                  { id: "mise_en_demeure", label: "Mise en demeure" }
-                ].map((l) => (
-                  <button
-                    key={l.id}
-                    onClick={() => setRelanceLevel(l.id)}
-                    className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
-                      relanceLevel === l.id ? "border-white bg-white text-[#1E1B4B]" : "border-white/20 bg-transparent text-[#94A3B8] hover:border-white/50 hover:text-white"
-                    }`}
-                  >
-                    {l.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Message */}
-            <div>
-              <div className="flex justify-between items-end mb-2">
-                <label className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider block">Message (Draft)</label>
-                <button className="flex items-center gap-1.5 text-[10px] font-bold text-[#818CF8] hover:text-white transition-colors">
-                  <Bot className="h-3 w-3" /> Générer IA
-                </button>
-              </div>
-              <textarea
-                value={messageDraft}
-                onChange={(e) => setMessageDraft(e.target.value)}
-                className="w-full h-40 rounded-xl border border-white/20 bg-white/5 p-3 text-xs text-white placeholder-white/30 focus:border-[#818CF8] focus:bg-white/10 focus:outline-none transition-all resize-none"
-                placeholder="Rédigez votre message ici..."
-              />
-            </div>
-
-            <button className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#4F46E5] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#4338CA]">
-              Envoyer la relance
-              <Send className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const { id } = useParams<{ id: string }>(); const router = useRouter();
+  const [invoice, setInvoice] = useState<InvoiceDTO | null>(null); const [client, setClient] = useState<ClientDTO | null>(null); const [payments, setPayments] = useState<PaymentDTO[]>([]); const [score, setScore] = useState(0); const [error, setError] = useState(""); const [editing, setEditing] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({ reference: "", amount: "", issuedAt: "", dueAt: "" }); const [paymentForm, setPaymentForm] = useState({ amount: "", paidAt: new Date().toISOString().slice(0, 10), reference: "" });
+  const [relance, setRelance] = useState({ channel: "email", level: "friendly", result: "to_follow_up", messageDraft: "" }); const [relanceId, setRelanceId] = useState<string | null>(null);
+  async function load() { const invoiceRes = await fetch(`/api/v1/invoices/${id}`); if (!invoiceRes.ok) { setError("Facture introuvable."); return; } const current: InvoiceDTO = await invoiceRes.json(); setInvoice(current); setInvoiceForm({ reference: current.reference, amount: String(current.amount), issuedAt: String(current.issuedAt).slice(0, 10), dueAt: String(current.dueAt).slice(0, 10) }); const [clientRes, paymentsRes, scoresRes, relancesRes] = await Promise.all([fetch(`/api/v1/clients/${current.clientId}`), fetch("/api/v1/payments?limit=100"), fetch("/api/v1/scoring/clients"), fetch(`/api/v1/relances?invoiceId=${id}`)]); if (clientRes.ok) setClient(await clientRes.json()); if (paymentsRes.ok) setPayments((await paymentsRes.json()).items.filter((payment: PaymentDTO) => payment.allocations.some((allocation) => allocation.invoiceId === id))); if (scoresRes.ok) setScore((await scoresRes.json()).find((item: { clientId: string }) => item.clientId === current.clientId)?.result.score ?? 0); if (relancesRes.ok) { const latest = (await relancesRes.json()).items?.[0]; if (latest) { setRelanceId(latest.id); setRelance({ channel: latest.channel, level: latest.level, result: latest.result, messageDraft: latest.messageDraft ?? "" }); } } }
+  useEffect(() => { void load(); }, [id]);
+  async function saveInvoice(event: FormEvent) { event.preventDefault(); const response = await fetch(`/api/v1/invoices/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...invoiceForm, amount: Number(invoiceForm.amount) }) }); if (!response.ok) { setError("Modification impossible."); return; } setEditing(false); await load(); }
+  async function deleteInvoice() { if (!window.confirm("Supprimer cette facture ?")) return; const response = await fetch(`/api/v1/invoices/${id}`, { method: "DELETE" }); if (!response.ok) { setError("Suppression impossible."); return; } router.push("/invoices"); }
+  async function addPayment(event: FormEvent) { event.preventDefault(); if (!invoice) return; const response = await fetch("/api/v1/payments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...paymentForm, clientId: invoice.clientId, amount: Number(paymentForm.amount) }) }); if (!response.ok) { setError((await response.json().catch(() => ({}))).error ?? "Paiement impossible."); return; } setPaymentForm({ amount: "", paidAt: new Date().toISOString().slice(0, 10), reference: "" }); await load(); }
+  async function ensureRelance() { if (relanceId) return relanceId; const response = await fetch("/api/v1/relances", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ invoiceId: id, channel: relance.channel, level: relance.level, result: relance.result }) }); if (!response.ok) throw new Error("Création de relance impossible."); const created = await response.json(); setRelanceId(created.id); return created.id as string; }
+  async function generate() { try { const currentId = await ensureRelance(); const response = await fetch(`/api/v1/relances/${currentId}/generate`, { method: "POST" }); if (!response.ok) throw new Error(); const updated = await response.json(); setRelance((value) => ({ ...value, messageDraft: updated.messageDraft ?? "" })); } catch { setError("La génération IA requiert une configuration IA valide."); } }
+  async function saveRelance(sent = false) { try { const currentId = await ensureRelance(); const response = await fetch(`/api/v1/relances/${currentId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...relance, sentAt: sent ? new Date().toISOString() : null }) }); if (!response.ok) throw new Error(); await load(); } catch { setError("Enregistrement de la relance impossible."); } }
+  if (!invoice) return <p className="text-sm text-[#64748B]">{error || "Chargement..."}</p>;
+  return <div className="grid gap-6 lg:grid-cols-[1fr_390px]"><div className="space-y-6"><Link href="/invoices" className="text-xs font-semibold text-[#4F46E5]">← Toutes les factures</Link><section className="rounded-2xl border bg-white p-6"><div className="flex justify-between gap-3"><div><h1 className="text-2xl font-bold">{invoice.reference}</h1><p className="mt-1 text-sm text-[#64748B]">{client?.identity.name ?? "Client"}</p></div><StatusBadge status={invoice.status} /></div><div className="mt-6 grid gap-4 sm:grid-cols-3"><div><p className="text-xs text-[#64748B]">Montant</p><p className="font-bold">{Number(invoice.amount).toFixed(2)} €</p></div><div><p className="text-xs text-[#64748B]">Payé</p><p className="font-bold text-green-600">{Number(invoice.amountPaid).toFixed(2)} €</p></div><div><p className="text-xs text-[#64748B]">Reste dû</p><p className="font-bold text-red-600">{Number(invoice.amountRemaining).toFixed(2)} €</p></div></div><div className="mt-5 flex gap-2"><button onClick={() => setEditing(!editing)} className="inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs"><Pencil className="h-3 w-3" />Modifier</button><button onClick={() => void deleteInvoice()} className="inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs text-red-600"><Trash2 className="h-3 w-3" />Supprimer</button><div className="ml-auto"><RiskBadge score={score} /></div></div>{editing && <form onSubmit={saveInvoice} className="mt-5 grid gap-3 border-t pt-5 sm:grid-cols-2"><input required value={invoiceForm.reference} onChange={(e) => setInvoiceForm({ ...invoiceForm, reference: e.target.value })} className="rounded-xl border p-2 text-sm" /><input required type="number" step="0.01" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} className="rounded-xl border p-2 text-sm" /><input required type="date" value={invoiceForm.issuedAt} onChange={(e) => setInvoiceForm({ ...invoiceForm, issuedAt: e.target.value })} className="rounded-xl border p-2 text-sm" /><input required type="date" value={invoiceForm.dueAt} onChange={(e) => setInvoiceForm({ ...invoiceForm, dueAt: e.target.value })} className="rounded-xl border p-2 text-sm" /><button className="rounded-xl bg-[#4F46E5] p-2 text-sm text-white">Sauvegarder</button></form>}</section><section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold">Enregistrer un paiement</h2><form onSubmit={addPayment} className="mt-4 grid gap-3 sm:grid-cols-3"><input required type="number" min="0.01" step="0.01" placeholder="Montant" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} className="rounded-xl border p-2 text-sm" /><input required type="date" value={paymentForm.paidAt} onChange={(e) => setPaymentForm({ ...paymentForm, paidAt: e.target.value })} className="rounded-xl border p-2 text-sm" /><input placeholder="Référence" value={paymentForm.reference} onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })} className="rounded-xl border p-2 text-sm" /><button className="rounded-xl bg-[#4F46E5] p-2 text-sm text-white">Affecter le paiement</button></form></section><section className="rounded-2xl border bg-white p-6"><h2 className="font-semibold">Historique des paiements</h2>{payments.length ? <div className="mt-3 space-y-2">{payments.map((payment) => <div key={payment.id} className="flex justify-between rounded-xl bg-[#F8FAFC] p-3 text-sm"><span>{new Date(payment.paidAt).toLocaleDateString("fr-FR")} {payment.reference && `· ${payment.reference}`}</span><span className="font-semibold">{Number(payment.allocations.filter((a) => a.invoiceId === id).reduce((sum, a) => sum + Number(a.amount), 0)).toFixed(2)} €</span></div>)}</div> : <p className="mt-3 text-sm text-[#64748B]">Aucun paiement enregistré.</p>}</section></div><aside className="h-fit rounded-2xl bg-[#1E1B4B] p-6 text-white"><h2 className="font-bold">Composer une relance</h2><div className="mt-5 space-y-3"><select value={relance.channel} onChange={(e) => setRelance({ ...relance, channel: e.target.value })} className="w-full rounded-xl p-2 text-sm text-black"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="phone">Téléphone</option></select><select value={relance.level} onChange={(e) => setRelance({ ...relance, level: e.target.value })} className="w-full rounded-xl p-2 text-sm text-black"><option value="friendly">Aimable</option><option value="reminder_1">Rappel 1</option><option value="reminder_2">Rappel 2</option><option value="final_notice">Mise en demeure</option></select><textarea value={relance.messageDraft} onChange={(e) => setRelance({ ...relance, messageDraft: e.target.value })} placeholder="Rédigez votre message..." className="h-48 w-full rounded-xl p-3 text-sm text-black" /><button onClick={() => void generate()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/30 p-2 text-sm"><Bot className="h-4 w-4" />Générer avec l'IA</button><button onClick={() => void saveRelance(false)} className="w-full rounded-xl bg-white p-2 text-sm font-semibold text-[#1E1B4B]">Enregistrer le brouillon</button><button onClick={() => void saveRelance(true)} className="w-full rounded-xl bg-[#4F46E5] p-2 text-sm font-semibold">Marquer comme envoyée</button><p className="text-[11px] text-[#CBD5E1]">Solvia enregistre la relance ; l'envoi au client reste manuel.</p></div></aside>{error && <p className="fixed bottom-4 right-4 rounded-xl bg-red-600 p-3 text-xs text-white">{error}</p>}</div>;
 }
