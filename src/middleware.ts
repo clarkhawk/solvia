@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
   if (!supabaseConfig) {
     if (process.env.NODE_ENV === "development") {
       console.warn(
-        "[middleware] Supabase non configuré — auth désactivée en dev. Corrigez NEXT_PUBLIC_SUPABASE_URL dans .env.local",
+        "[middleware] Supabase non configuré - auth désactivée en dev. Corrigez NEXT_PUBLIC_SUPABASE_URL dans .env.local",
       );
       return supabaseResponse;
     }
