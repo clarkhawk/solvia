@@ -21,6 +21,8 @@ export const FIXED_TEMPLATE_COLUMNS = [
 ] as const;
 
 export interface ImportRow {
+  /** Numéro de la ligne dans le fichier source, en-tête compris (première donnée = 2). */
+  sourceRow: number;
   clientName: string;
   clientEmail?: string;
   clientPhone?: string;
@@ -31,9 +33,22 @@ export interface ImportRow {
   invoiceDueAt: Date;
 }
 
+export interface ImportRowError {
+  row: number;
+  message: string;
+}
+
+/** Résultat de l'analyse d'un fichier : lignes valides d'un côté, lignes rejetées de l'autre. */
+export interface ParsedImport {
+  rows: ImportRow[];
+  errors: ImportRowError[];
+  /** En-têtes réellement trouvés dans le fichier, utiles pour diagnostiquer un mauvais format. */
+  headers: string[];
+}
+
 export interface ImportResult {
   clientsCreated: number;
   clientsExisting: number;
   invoicesCreated: number;
-  errors: Array<{ row: number; message: string }>;
+  errors: ImportRowError[];
 }
