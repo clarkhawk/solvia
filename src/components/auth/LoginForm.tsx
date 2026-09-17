@@ -13,6 +13,7 @@ export function LoginForm() {
   const [companyName, setCompanyName] = useState("");
   const [currency, setCurrency] = useState("EUR");
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const [signupStep, setSignupStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,17 +56,23 @@ export function LoginForm() {
       setLoading(false);
       return;
     }
-    router.push("/");
-    router.refresh();
+    router.push("/login?created=1");
   };
 
   function switchMode(nextMode: "login" | "signup") {
-    if (nextMode === "signup") {
-      router.push("/signup");
+    setMode(nextMode);
+    setSignupStep(1);
+    setError(null);
+  }
+
+  function goToAccountStep(event: React.FormEvent) {
+    event.preventDefault();
+    if (!companyName.trim()) {
+      setError("Indiquez le nom de votre entreprise.");
       return;
     }
-    setMode(nextMode);
     setError(null);
+    setSignupStep(2);
   }
 
   return (
@@ -93,9 +100,10 @@ export function LoginForm() {
       )}
 
       {/* Form */}
-      <form onSubmit={mode === "login" ? handleLogin : handleSignup} className="flex flex-col gap-5">
-        {mode === "signup" && (
+      <form onSubmit={mode === "login" ? handleLogin : signupStep === 1 ? goToAccountStep : handleSignup} className="flex flex-col gap-5">
+        {mode === "signup" && signupStep === 1 && (
           <>
+            <p className="text-sm font-semibold text-[#4F46E5]">Étape 1 sur 2 — Votre entreprise</p>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-[#0F172A]">Nom de l&apos;entreprise</label>
               <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Votre entreprise" disabled={loading} required className="w-full h-[54px] px-4 rounded-[12px] border border-[#E2E8F0] bg-white text-[#0F172A] placeholder:text-[#64748B] focus:outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20" />
@@ -106,11 +114,18 @@ export function LoginForm() {
                 <option value="EUR">EUR — Euro</option><option value="XOF">XOF — Franc CFA</option><option value="USD">USD — Dollar</option>
               </select>
             </div>
+            <button
+              type="submit"
+              className="w-full h-[54px] mt-4 rounded-[12px] bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold text-[16px] transition-all flex items-center justify-center gap-2 group hover:-translate-y-[1px] shadow-sm hover:shadow-md"
+            >
+              Suivant <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
           </>
         )}
         
         {/* Email Field */}
-        <div className="flex flex-col gap-2">
+        {(mode === "login" || signupStep === 2) && <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-right-2 duration-300">
+          {mode === "signup" && <p className="text-sm font-semibold text-[#4F46E5]">Étape 2 sur 2 — Votre compte</p>}
           <label className="text-sm font-medium text-[#0F172A]">
             Email
           </label>
@@ -128,16 +143,18 @@ export function LoginForm() {
               className="w-full h-[54px] pl-12 pr-4 rounded-[12px] border border-[#E2E8F0] bg-white text-[#0F172A] placeholder:text-[#64748B] focus:outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
-        </div>
+        </div>}
 
         {/* Password Field Component */}
-        <PasswordInput 
+        {(mode === "login" || signupStep === 2) && <PasswordInput 
           value={password} 
           onChange={setPassword} 
           disabled={loading} 
-        />
+        />}
 
         {/* Submit Button */}
+        {(mode === "login" || signupStep === 2) && <div className="flex gap-3">
+        {mode === "signup" && <button type="button" onClick={() => setSignupStep(1)} disabled={loading} className="h-[54px] rounded-[12px] border border-[#E2E8F0] px-5 text-sm font-bold text-[#64748B] hover:bg-[#F8FAFC]">Retour</button>}
         <button
           type="submit"
           disabled={loading}
@@ -155,6 +172,7 @@ export function LoginForm() {
             </>
           )}
         </button>
+        </div>}
       </form>
 
       {/* Footer Text */}
