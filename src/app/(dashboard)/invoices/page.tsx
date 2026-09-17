@@ -1,20 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/dashboard/status-badge";
-
-interface Invoice {
-  id: string;
-  reference: string;
-  amount: number;
-  amountRemaining: number;
-  dueAt: string;
-  status: string;
-}
+import type { InvoiceDTO } from "@/modules/factures/types";
 
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceDTO[]>([]);
 
   useEffect(() => {
     fetch("/api/v1/invoices")
@@ -24,38 +17,49 @@ export default function InvoicesPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Factures</h1>
-      <Card>
+    <div className="space-y-6 max-w-[1280px] mx-auto">
+      <h1 className="text-3xl font-bold tracking-tight text-[#0F172A]">Factures</h1>
+      <Card className="rounded-2xl border-[#E2E8F0] shadow-sm">
         <CardHeader>
           <CardTitle>Toutes les factures</CardTitle>
         </CardHeader>
         <CardContent>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="pb-2">Référence</th>
-                <th className="pb-2">Montant</th>
-                <th className="pb-2">Reste dû</th>
-                <th className="pb-2">Échéance</th>
-                <th className="pb-2">Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((inv) => (
-                <tr key={inv.id} className="border-b">
-                  <td className="py-2">{inv.reference}</td>
-                  <td className="py-2">{inv.amount.toFixed(2)} EUR</td>
-                  <td className="py-2">{inv.amountRemaining.toFixed(2)} EUR</td>
-                  <td className="py-2">{new Date(inv.dueAt).toLocaleDateString("fr-FR")}</td>
-                  <td className="py-2">
-                    <StatusBadge status={inv.status} />
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#E2E8F0] text-left text-xs font-semibold text-[#64748B] uppercase tracking-wider bg-[#F8FAFC]">
+                  <th className="px-4 py-3">Référence</th>
+                  <th className="px-4 py-3">Montant</th>
+                  <th className="px-4 py-3">Reste dû</th>
+                  <th className="px-4 py-3">Échéance</th>
+                  <th className="px-4 py-3">Statut</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {!invoices.length && <p className="text-muted-foreground">Aucune facture</p>}
+              </thead>
+              <tbody className="divide-y divide-[#E2E8F0]">
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="transition-colors hover:bg-[#F8FAFC]">
+                    <td className="px-4 py-3 font-semibold text-[#0F172A]">{inv.reference}</td>
+                    <td className="px-4 py-3">{Number(inv.amount).toFixed(2)} €</td>
+                    <td className="px-4 py-3">{Number(inv.amountRemaining).toFixed(2)} €</td>
+                    <td className="px-4 py-3">{new Date(inv.dueAt).toLocaleDateString("fr-FR")}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={inv.status} />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/invoices/${inv.id}`}
+                        className="inline-flex items-center rounded-xl bg-white border border-[#E2E8F0] px-3 py-1.5 text-xs font-semibold text-[#0F172A] hover:bg-[#F8FAFC] transition-colors shadow-sm"
+                      >
+                        Voir détail
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!invoices.length && <p className="text-muted-foreground p-4 text-center">Aucune facture</p>}
         </CardContent>
       </Card>
     </div>

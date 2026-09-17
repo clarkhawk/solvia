@@ -69,13 +69,7 @@ export function Sidebar() {
     <aside className="flex h-screen w-64 flex-col border-r border-[#E2E8F0] bg-white">
       {/* En-tête avec Logo Solvia */}
       <div className="flex h-16 items-center gap-2.5 border-b border-[#E2E8F0] px-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4F46E5] text-white shadow-sm">
-          <Shield className="h-5 w-5" />
-        </div>
-        <div>
-          <span className="text-lg font-bold tracking-tight text-[#0F172A]">solvia</span>
-          <span className="block text-[10px] font-medium text-[#64748B]">Recouvrement B2B</span>
-        </div>
+        <img src="/logo.png" alt="Solviaa" className="h-8 w-auto object-contain" />
       </div>
 
       {/* Navigation principale */}
