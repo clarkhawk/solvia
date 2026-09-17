@@ -43,3 +43,5 @@ next-env.d.ts
 prisma/*.db
 prisma/*.db-journal
 
+# Local agent work log (must never be committed)
+WORKLOG.local.md

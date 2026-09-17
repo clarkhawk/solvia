@@ -20,6 +20,7 @@ Plateforme de recouvrement pour PME — documentation technique et fonctionnelle
 | [UI & Design](./10-ui-design.md) | Templates Finly, logos, charte visuelle |
 | [Supabase Auth setup](./11-supabase-auth-setup.md) | Config auth Supabase |
 | [**Production first (sans localhost)**](./12-production-first-setup.md) | **Guide complet solviaa.vercel.app** |
+| [Invitations et comptes](./14-invitations-equipe.md) | Invitations d'équipe et inscription sécurisée |
 
 ## Démarrage rapide
 

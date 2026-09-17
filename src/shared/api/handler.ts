@@ -4,6 +4,7 @@ import type { AuthContext } from "@/shared/auth/types";
 import { requirePermission } from "@/shared/auth/rbac";
 import type { Permission } from "@/shared/auth/types";
 import { isAppError } from "@/shared/errors/app-error";
+import { ZodError } from "zod";
 
 type HandlerFn = (ctx: AuthContext, request: Request) => Promise<NextResponse>;
 
@@ -16,6 +17,12 @@ export function withAuth(permission: Permission | null, handler: HandlerFn) {
       }
       return await handler(ctx, request);
     } catch (error) {
+      if (error instanceof ZodError) {
+        return NextResponse.json(
+          { error: "Invalid request data", code: "VALIDATION_ERROR", details: error.flatten().fieldErrors },
+          { status: 400 },
+        );
+      }
       if (isAppError(error)) {
         return NextResponse.json({ error: error.message, code: error.code }, { status: error.statusCode });
       }

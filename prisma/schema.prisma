@@ -77,6 +77,16 @@ enum AuditAction {
   scoring_update
   ai_config_update
   user_permission_update
+  invitation_create
+  invitation_revoke
+  invitation_accept
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  revoked
+  expired
 }
 
 model Organization {
@@ -97,6 +107,7 @@ model Organization {
   auditLogs       AuditLog[]
   alertEvents     AlertEvent[]
   inAppNotifications InAppNotification[]
+  invitations     Invitation[]
 
   @@map("organizations")
 }
@@ -117,6 +128,7 @@ model User {
   auditLogs          AuditLog[]
   notificationPreference NotificationPreference?
   inAppNotifications InAppNotification[]
+  invitationsCreated Invitation[] @relation("InvitationCreator")
 
   @@index([organizationId])
   @@map("users")
@@ -277,6 +289,28 @@ model NotificationPreference {
   user                   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
+}
+
+/// Invitation à usage unique. Seul le hachage du jeton est conservé en base :
+/// la valeur brute n'est renvoyée qu'à l'administrateur au moment de la création.
+model Invitation {
+  id              String           @id @default(uuid())
+  organizationId  String           @map("organization_id")
+  email           String
+  role            UserRole
+  tokenHash       String           @unique @map("token_hash")
+  status          InvitationStatus @default(pending)
+  expiresAt       DateTime         @map("expires_at")
+  acceptedAt      DateTime?        @map("accepted_at")
+  invitedById     String?          @map("invited_by_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy       User?            @relation("InvitationCreator", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([email, status])
+  @@map("invitations")
 }
 
 model InAppNotification {
