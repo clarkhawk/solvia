@@ -22,4 +22,5 @@ export type Permission =
   | "scoring:configure"
   | "ai:configure"
   | "team:manage"
+  | "organization:manage"
   | "alerts:receive";

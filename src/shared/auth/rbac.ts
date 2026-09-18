@@ -14,6 +14,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "scoring:configure",
     "ai:configure",
     "team:manage",
+    "organization:manage",
     "alerts:receive",
   ],
   dirigeant: [
@@ -27,6 +28,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "import:execute",
     "scoring:configure",
     "ai:configure",
+    "organization:manage",
     "alerts:receive",
   ],
   comptable: [

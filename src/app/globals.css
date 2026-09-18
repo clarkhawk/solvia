@@ -65,3 +65,15 @@ input:-webkit-autofill:active {
   animation: pulse-glow 3s ease-in-out infinite;
 }
 
+
+/* Mode présentation : toutes les tailles étant exprimées en rem, augmenter la
+   base agrandit l'interface sans modifier les couleurs ni la mise en page. */
+html.presentation-mode {
+  font-size: 18.5px;
+}
+
+@media (min-width: 1280px) {
+  html.presentation-mode {
+    font-size: 19.5px;
+  }
+}

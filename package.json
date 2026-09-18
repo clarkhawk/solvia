@@ -14,6 +14,7 @@
     "db:migrate:deploy": "node --env-file=.env.local node_modules/prisma/build/index.js migrate deploy",
     "db:push": "node --env-file=.env.local node_modules/prisma/build/index.js db push",
     "db:seed": "node --env-file=.env.local node_modules/.bin/tsx prisma/seed.ts",
+    "db:seed:demo": "tsx scripts/seed-demo.ts",
     "auth:link-user": "node --env-file=.env.local node_modules/.bin/tsx scripts/link-auth-user.ts",
     "postinstall": "prisma generate"
   },
