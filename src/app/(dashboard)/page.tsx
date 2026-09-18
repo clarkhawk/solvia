@@ -15,6 +15,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/dashboard/status-badge";
+import { DashboardAnalytics } from "@/components/dashboard/analytics-section";
+import { PresentationModeToggle } from "@/components/dashboard/presentation-mode";
 import {
   AlertTriangle,
   Clock,
@@ -132,6 +134,8 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <PresentationModeToggle />
+
           <Link
             href="/import"
             className="inline-flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-4 py-2 text-xs font-semibold text-[#0F172A] shadow-sm transition-colors hover:bg-[#F8FAFC]"
@@ -240,6 +244,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Statistiques de recouvrement */}
+      <DashboardAnalytics />
 
       {/* Section Contraste Sombre inspirée du bloc inférieur de la Maquette 1 */}
       <div className="rounded-3xl bg-[#1E1B4B] p-6 text-white shadow-sm">

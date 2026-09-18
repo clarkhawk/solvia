@@ -25,6 +25,7 @@ import {
   Bot,
   LogOut,
   HelpCircle,
+  Building2,
 } from "lucide-react";
 
 /**
@@ -50,6 +51,7 @@ const mainNav: NavItem[] = [
 
 const settingsNav: NavItem[] = [
   { href: "/scoring", label: "Scoring de Risque", icon: Sliders },
+  { href: "/settings/organization", label: "Entreprise & Devise", icon: Building2 },
   { href: "/settings/team", label: "Équipe & Permissions", icon: ShieldCheck },
   { href: "/settings/ai-provider", label: "Moteur IA (BYOK)", icon: Bot },
 ];

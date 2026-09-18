@@ -4,14 +4,23 @@
  * Permet à une nouvelle entreprise de créer son organisation, son compte administrateur Supabase
  * et son profil utilisateur PostgreSQL en une seule transaction atomique.
  *
+ * Si l'écriture PostgreSQL échoue, l'utilisateur Supabase créé juste avant est supprimé :
+ * sans cette compensation, l'adresse resterait prise côté Auth sans organisation associée,
+ * donc impossible à réutiliser et bloquée en 403 à la connexion.
+ *
  * @route POST /api/v1/auth/signup
  */
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma, UserRole } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { getSupabaseAdminClient } from "@/shared/auth/supabase-admin";
-import { UserRole } from "@prisma/client";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const isProduction = process.env.NODE_ENV === "production";
 
 /**
  * Schéma de validation Zod pour la création d'entreprise et d'utilisateur.
@@ -25,9 +34,7 @@ const SignUpSchema = z.object({
     .string()
     .email("Veuillez renseigner une adresse email valide.")
     .transform((val) => val.toLowerCase().trim()),
-  password: z
-    .string()
-    .min(8, "Le mot de passe doit comporter au moins 8 caractères."),
+  password: z.string().min(8, "Le mot de passe doit comporter au moins 8 caractères."),
   currency: z
     .string()
     .length(3, "La devise doit être un code ISO à 3 lettres (ex: EUR).")
@@ -43,6 +50,9 @@ export type SignUpPayload = z.infer<typeof SignUpSchema>;
  * @returns {Promise<NextResponse>} Réponse JSON confirmant la création ou détaillant l'erreur
  */
 export async function POST(request: Request) {
+  const requestId = request.headers.get("x-vercel-id") ?? crypto.randomUUID();
+  let createdAuthUserId: string | null = null;
+
   try {
     const rawBody = await request.json();
     const validationResult = SignUpSchema.safeParse(rawBody);
@@ -52,6 +62,7 @@ export async function POST(request: Request) {
         {
           error: "Données d'inscription invalides",
           details: validationResult.error.flatten().fieldErrors,
+          requestId,
         },
         { status: 400 },
       );
@@ -60,8 +71,6 @@ export async function POST(request: Request) {
     const { companyName, email, password, currency } = validationResult.data;
 
     // 1. Créer l'utilisateur dans Supabase Auth via le client Admin.
-    // Supabase garantit déjà l'unicité de l'e-mail, ce qui évite une requête
-    // PostgreSQL distante supplémentaire avant chaque inscription.
     const supabaseAdmin = getSupabaseAdminClient();
 
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -74,84 +83,88 @@ export async function POST(request: Request) {
     });
 
     if (authError) {
-      // Si l'utilisateur existe déjà dans Supabase Auth
       if (authError.message?.toLowerCase().includes("already registered") || authError.status === 422) {
         return NextResponse.json(
-          { error: "Cet email est déjà enregistré dans Supabase. Veuillez vous connecter." },
+          { error: "Cet email est déjà enregistré dans Supabase. Veuillez vous connecter.", requestId },
           { status: 409 },
         );
       }
 
       console.error("[SignUp] Erreur Supabase Auth Admin:", authError);
       return NextResponse.json(
-        { error: `Erreur lors de la création de l'accès auth : ${authError.message}` },
+        { error: `Erreur lors de la création de l'accès auth : ${authError.message}`, requestId },
         { status: 500 },
       );
     }
 
     if (!authUser?.user) {
       return NextResponse.json(
-        { error: "Impossible de générer le profil d'authentification." },
+        { error: "Impossible de générer le profil d'authentification.", requestId },
         { status: 500 },
       );
     }
 
     const authUserId = authUser.user.id;
+    createdAuthUserId = authUserId;
 
-    // 2. Création atomique de l'Organisation, du Scoring et du profil User dans PostgreSQL
-    const newOrganization = await prisma.$transaction(async (tx) => {
-      // A. Création de l'entité Entreprise / Organisation
-      const org = await tx.organization.create({
-        data: {
-          name: companyName,
-          currency,
-          timezone: "Europe/Paris",
-          riskThreshold: 70,
-        },
-      });
-
-      // B. Configuration de scoring prédictif par défaut
-      await tx.scoringConfig.create({
-        data: {
-          organizationId: org.id,
-          riskThreshold: 70,
-          criteria: [
-            { name: "Montant en retard", metricType: "montant_en_retard", weight: 0.5, enabled: true },
-            { name: "Ancienneté du retard", metricType: "anciennete_retard", weight: 0.3, enabled: true },
-            { name: "Historique de retards", metricType: "taux_retard_historique", weight: 0.2, enabled: true },
-          ],
-        },
-      });
-
-      // C. Création de l'utilisateur avec privilège Administrateur / Dirigeant
-      const dbUser = await tx.user.create({
-        data: {
-          organizationId: org.id,
-          authUserId,
-          email,
-          role: UserRole.admin,
-          canReceiveAlerts: true,
-          canRelanceClients: true,
-        },
-      });
-
-      // D. Création d'un premier log d'audit
-      await tx.auditLog.create({
-        data: {
-          organizationId: org.id,
-          userId: dbUser.id,
-          action: "login",
-          entityType: "organization",
-          entityId: org.id,
-          metadata: {
-            event: "onboarding_completed",
-            company: companyName,
+    // 2. Création atomique de l'Organisation, du Scoring et du profil User dans PostgreSQL.
+    //    Le pooler ajoute de la latence : la fenêtre par défaut de 5 s est trop courte.
+    const newOrganization = await prisma.$transaction(
+      async (tx) => {
+        // A. Création de l'entité Entreprise / Organisation
+        const org = await tx.organization.create({
+          data: {
+            name: companyName,
+            currency,
+            timezone: "Europe/Paris",
+            riskThreshold: 70,
           },
-        },
-      });
+        });
 
-      return org;
-    });
+        // B. Configuration de scoring par défaut
+        await tx.scoringConfig.create({
+          data: {
+            organizationId: org.id,
+            riskThreshold: 70,
+            criteria: [
+              { name: "Montant en retard", metricType: "montant_en_retard", weight: 0.5, enabled: true },
+              { name: "Ancienneté du retard", metricType: "anciennete_retard", weight: 0.3, enabled: true },
+              { name: "Historique de retards", metricType: "taux_retard_historique", weight: 0.2, enabled: true },
+            ],
+          },
+        });
+
+        // C. Création de l'utilisateur avec privilège Administrateur
+        const dbUser = await tx.user.create({
+          data: {
+            organizationId: org.id,
+            authUserId,
+            email,
+            role: UserRole.admin,
+            canReceiveAlerts: true,
+            canRelanceClients: true,
+          },
+        });
+
+        // D. Premier événement d'audit
+        await tx.auditLog.create({
+          data: {
+            organizationId: org.id,
+            userId: dbUser.id,
+            action: "login",
+            entityType: "organization",
+            entityId: org.id,
+            metadata: {
+              event: "onboarding_completed",
+              company: companyName,
+            },
+          },
+        });
+
+        return org;
+      },
+      { maxWait: 10_000, timeout: 20_000 },
+    );
 
     return NextResponse.json(
       {
@@ -169,9 +182,54 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("[SignUp] Erreur inattendue :", error);
+    console.error(
+      JSON.stringify({
+        level: "error",
+        scope: "signup",
+        requestId,
+        name: error instanceof Error ? error.name : typeof error,
+        message: error instanceof Error ? error.message : String(error),
+        prismaCode: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined,
+      }),
+    );
+    if (error instanceof Error && error.stack) console.error(error.stack);
+
+    // Compensation : l'accès Auth ne doit pas survivre à l'échec de l'écriture métier.
+    if (createdAuthUserId) {
+      try {
+        await getSupabaseAdminClient().auth.admin.deleteUser(createdAuthUserId);
+        console.error(`[SignUp] Utilisateur Auth ${createdAuthUserId} supprimé après échec.`);
+      } catch (cleanupError) {
+        console.error(
+          `[SignUp] ÉCHEC du nettoyage de l'utilisateur Auth ${createdAuthUserId} : à supprimer à la main dans Supabase.`,
+          cleanupError,
+        );
+      }
+    }
+
+    const code =
+      error instanceof Prisma.PrismaClientKnownRequestError
+        ? error.code
+        : error instanceof Prisma.PrismaClientInitializationError
+          ? "DB_UNREACHABLE"
+          : "INTERNAL_ERROR";
+
+    const message =
+      code === "P2021" || code === "P2022"
+        ? "Le schéma de la base est incomplet : migrations Prisma non appliquées."
+        : code === "P2028"
+          ? "La base a mis trop de temps à répondre. Réessayez dans un instant."
+          : code === "DB_UNREACHABLE"
+            ? "Base de données injoignable."
+            : "Une erreur interne est survenue lors de la création de l'entreprise.";
+
     return NextResponse.json(
-      { error: "Une erreur interne est survenue lors de la création de l'entreprise." },
+      {
+        error: message,
+        code,
+        requestId,
+        detail: isProduction ? undefined : error instanceof Error ? error.message : String(error),
+      },
       { status: 500 },
     );
   }

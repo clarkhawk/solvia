@@ -5,7 +5,11 @@ import { AppError } from "@/shared/errors/app-error";
 import { aiProviderConfigService } from "@/modules/ai-providers/config.service";
 import { clientRepository } from "@/modules/clients/repository";
 import { invoiceService } from "@/modules/factures/service";
+import { buildRelanceTemplate } from "./templates";
 import type { CreateRelanceInput, RelanceDTO, UpdateRelanceInput } from "./types";
+
+/** Origine du brouillon : modèle intégré ou fournisseur d'IA de l'organisation. */
+export type MessageSource = "ai" | "template";
 
 function toDTO(record: Relance): RelanceDTO {
   return {
@@ -92,7 +96,11 @@ export class RelanceService {
     return toDTO(record);
   }
 
-  async generateMessage(organizationId: string, userId: string, relanceId: string): Promise<RelanceDTO> {
+  async generateMessage(
+    organizationId: string,
+    userId: string,
+    relanceId: string,
+  ): Promise<{ relance: RelanceDTO; source: MessageSource }> {
     const relance = await this.getById(organizationId, relanceId);
     const invoice = await invoiceService.getById(organizationId, relance.invoiceId);
     const client = await clientRepository.findById(organizationId, invoice.clientId);
@@ -107,19 +115,50 @@ export class RelanceService {
     due.setHours(0, 0, 0, 0);
     const daysOverdue = Math.max(0, Math.floor((today.getTime() - due.getTime()) / 86400000));
 
-    const generated = await aiProviderConfigService.generateMessage(organizationId, {
-      channel: relance.channel,
-      level: relance.level,
-      invoice: {
-        reference: invoice.reference,
-        amount: invoice.amountRemaining,
-        dueAt: invoice.dueAt,
-        daysOverdue,
-      },
-      client: { displayName: client.identity.name },
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { name: true, currency: true },
     });
 
-    return this.update(organizationId, userId, relanceId, { messageDraft: generated.content });
+    try {
+      const generated = await aiProviderConfigService.generateMessage(organizationId, {
+        channel: relance.channel,
+        level: relance.level,
+        invoice: {
+          reference: invoice.reference,
+          amount: invoice.amountRemaining,
+          dueAt: invoice.dueAt,
+          daysOverdue,
+        },
+        client: { displayName: client.identity.name },
+      });
+
+      const updated = await this.update(organizationId, userId, relanceId, {
+        messageDraft: generated.content,
+      });
+      return { relance: updated, source: "ai" };
+    } catch (error) {
+      // Clé IA absente, invalide, ou fournisseur injoignable : on retombe sur le
+      // modèle intégré plutôt que de laisser l'utilisateur devant un champ vide.
+      console.error("Génération IA indisponible, bascule sur le modèle intégré :", error);
+
+      const content = buildRelanceTemplate({
+        channel: relance.channel,
+        level: relance.level,
+        clientName: client.identity.name,
+        reference: invoice.reference,
+        amountRemaining: invoice.amountRemaining,
+        dueAt: invoice.dueAt,
+        daysOverdue,
+        currency: organization?.currency ?? "XOF",
+        organizationName: organization?.name ?? "notre service comptable",
+      });
+
+      const updated = await this.update(organizationId, userId, relanceId, {
+        messageDraft: content,
+      });
+      return { relance: updated, source: "template" };
+    }
   }
 }
 
