@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-primary: #4f46e5;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f1f5f9;
+  --color-secondary-foreground: #0f172a;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-accent: #eef2ff;
+  --color-accent-foreground: #4338ca;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-ring: #4f46e5;
+  --radius: 0.75rem;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Neutralisation du jaune imposé par l'autocomplétion Chrome / Safari */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+@keyframes float-soft {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+.animate-float-soft {
+  animation: float-soft 5s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+
+/* Mode présentation : toutes les tailles étant exprimées en rem, augmenter la
+   base agrandit l'interface sans modifier les couleurs ni la mise en page. */
+html.presentation-mode {
+  font-size: 18.5px;
+}
+
+@media (min-width: 1280px) {
+  html.presentation-mode {
+    font-size: 19.5px;
+  }
+}

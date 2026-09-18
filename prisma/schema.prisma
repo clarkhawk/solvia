@@ -1,0 +1,354 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  dirigeant
+  comptable
+  admin
+  commercial
+}
+
+enum InvoiceStatus {
+  upcoming
+  overdue
+  paid
+  partially_paid
+  cancelled
+}
+
+enum RelanceChannel {
+  whatsapp
+  phone
+  email
+}
+
+enum RelanceLevel {
+  friendly
+  reminder_1
+  reminder_2
+  final_notice
+}
+
+enum RelanceResult {
+  response_received
+  payment_promise
+  to_follow_up
+  payment_received
+  no_response
+}
+
+enum AlertType {
+  due_in_7
+  due_today
+  overdue_7
+}
+
+enum AlertStatus {
+  pending
+  sent
+  failed
+}
+
+enum AIProviderType {
+  openai
+  gemini
+  anthropic
+  grok
+}
+
+enum AuditAction {
+  login
+  invoice_create
+  invoice_update
+  invoice_delete
+  payment_create
+  relance_create
+  relance_send
+  client_create
+  client_update
+  import_complete
+  scoring_update
+  ai_config_update
+  user_permission_update
+  invitation_create
+  invitation_revoke
+  invitation_accept
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  revoked
+  expired
+}
+
+enum JoinRequestStatus {
+  pending
+  approved
+  rejected
+}
+
+model Organization {
+  id              String           @id @default(uuid())
+  name            String
+  timezone        String           @default("Europe/Paris")
+  currency        String           @default("EUR")
+  riskThreshold   Int              @default(70) @map("risk_threshold")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  users           User[]
+  clients         Client[]
+  invoices        Invoice[]
+  payments        Payment[]
+  relances        Relance[]
+  scoringConfig   ScoringConfig?
+  aiProviderConfig AIProviderConfig?
+  auditLogs       AuditLog[]
+  alertEvents     AlertEvent[]
+  inAppNotifications InAppNotification[]
+  invitations     Invitation[]
+  joinRequests    JoinRequest[]
+
+  @@map("organizations")
+}
+
+model JoinRequest {
+  id              String            @id @default(uuid())
+  organizationId  String            @map("organization_id")
+  authUserId      String            @map("auth_user_id")
+  email           String
+  status          JoinRequestStatus @default(pending)
+  reviewedById    String?           @map("reviewed_by_id")
+  reviewedAt      DateTime?         @map("reviewed_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, authUserId])
+  @@index([organizationId, status])
+  @@map("join_requests")
+}
+
+model User {
+  id                 String                @id @default(uuid())
+  organizationId     String                @map("organization_id")
+  authUserId         String                @unique @map("auth_user_id")
+  role               UserRole
+  email              String
+  phoneEncrypted     Bytes?                @map("phone_encrypted")
+  canReceiveAlerts   Boolean               @default(false) @map("can_receive_alerts")
+  canRelanceClients  Boolean               @default(false) @map("can_relance_clients")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+  organization       Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  relances           Relance[]
+  auditLogs          AuditLog[]
+  notificationPreference NotificationPreference?
+  inAppNotifications InAppNotification[]
+  invitationsCreated Invitation[] @relation("InvitationCreator")
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+model Client {
+  id                String       @id @default(uuid())
+  organizationId    String       @map("organization_id")
+  externalCode      String?      @map("external_code")
+  identityEncrypted Bytes        @map("identity_encrypted")
+  contactEncrypted  Bytes        @map("contact_encrypted")
+  emailHash         String?      @map("email_hash")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoices          Invoice[]
+  payments          Payment[]
+
+  @@unique([organizationId, externalCode])
+  @@index([organizationId, emailHash])
+  @@map("clients")
+}
+
+model Invoice {
+  id             String              @id @default(uuid())
+  organizationId String              @map("organization_id")
+  clientId       String              @map("client_id")
+  reference      String
+  amount         Decimal             @db.Decimal(12, 2)
+  amountPaid     Decimal             @default(0) @map("amount_paid") @db.Decimal(12, 2)
+  issuedAt       DateTime            @map("issued_at") @db.Date
+  dueAt          DateTime            @map("due_at") @db.Date
+  status         InvoiceStatus       @default(upcoming)
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client         Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  allocations    PaymentAllocation[]
+  relances       Relance[]
+  alertEvents    AlertEvent[]
+
+  @@index([organizationId, dueAt, status])
+  @@index([organizationId, clientId, status])
+  @@unique([organizationId, reference])
+  @@map("invoices")
+}
+
+model Payment {
+  id             String              @id @default(uuid())
+  organizationId String              @map("organization_id")
+  clientId       String              @map("client_id")
+  amount         Decimal             @db.Decimal(12, 2)
+  paidAt         DateTime            @map("paid_at") @db.Date
+  reference      String?
+  createdAt      DateTime            @default(now()) @map("created_at")
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client         Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  allocations    PaymentAllocation[]
+
+  @@index([organizationId, clientId])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id        String  @id @default(uuid())
+  paymentId String  @map("payment_id")
+  invoiceId String  @map("invoice_id")
+  amount    Decimal @db.Decimal(12, 2)
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([invoiceId])
+  @@map("payment_allocations")
+}
+
+model Relance {
+  id             String         @id @default(uuid())
+  organizationId String         @map("organization_id")
+  invoiceId      String         @map("invoice_id")
+  createdById    String         @map("created_by_id")
+  channel        RelanceChannel
+  level          RelanceLevel
+  result         RelanceResult  @default(to_follow_up)
+  messageDraft   String?        @map("message_draft") @db.Text
+  sentAt         DateTime?      @map("sent_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoice        Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  createdBy      User           @relation(fields: [createdById], references: [id])
+
+  @@index([organizationId, invoiceId])
+  @@map("relances")
+}
+
+model ScoringConfig {
+  id             String       @id @default(uuid())
+  organizationId String       @unique @map("organization_id")
+  criteria       Json
+  riskThreshold  Int          @default(70) @map("risk_threshold")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("scoring_configs")
+}
+
+model AIProviderConfig {
+  id               String         @id @default(uuid())
+  organizationId   String         @unique @map("organization_id")
+  provider         AIProviderType
+  apiKeyEncrypted  Bytes          @map("api_key_encrypted")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("ai_provider_configs")
+}
+
+model AlertEvent {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  invoiceId      String       @map("invoice_id")
+  alertType      AlertType    @map("alert_type")
+  status         AlertStatus  @default(pending)
+  triggeredAt    DateTime     @default(now()) @map("triggered_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([invoiceId, alertType])
+  @@index([organizationId, alertType, triggeredAt])
+  @@map("alert_events")
+}
+
+model AuditLog {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  userId         String?      @map("user_id")
+  action         AuditAction
+  entityType     String       @map("entity_type")
+  entityId       String?      @map("entity_id")
+  metadata       Json?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@map("audit_logs")
+}
+
+model NotificationPreference {
+  id                     String  @id @default(uuid())
+  userId                 String  @unique @map("user_id")
+  inApp                  Boolean @default(true) @map("in_app")
+  email                  Boolean @default(true)
+  whatsapp               Boolean @default(false)
+  whatsappNumberEncrypted Bytes? @map("whatsapp_number_encrypted")
+  user                   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+/// Invitation à usage unique. Seul le hachage du jeton est conservé en base :
+/// la valeur brute n'est renvoyée qu'à l'administrateur au moment de la création.
+model Invitation {
+  id              String           @id @default(uuid())
+  organizationId  String           @map("organization_id")
+  email           String
+  role            UserRole
+  tokenHash       String           @unique @map("token_hash")
+  status          InvitationStatus @default(pending)
+  expiresAt       DateTime         @map("expires_at")
+  acceptedAt      DateTime?        @map("accepted_at")
+  invitedById     String?          @map("invited_by_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy       User?            @relation("InvitationCreator", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([email, status])
+  @@map("invitations")
+}
+
+model InAppNotification {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  userId         String       @map("user_id")
+  title          String
+  message        String       @db.Text
+  read           Boolean      @default(false)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("in_app_notifications")
+}
