@@ -15,7 +15,38 @@ import { useEffect, useRef, useState } from "react";
 import {
   Bell,
   Building,
+  Calendar,
 } from "lucide-react";
+
+function startOfDay(date: Date) {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+function formatLongDate(date: Date) {
+  const formatted = new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
+function formatToday(today: Date) {
+  const currentDay = startOfDay(today);
+  return formatLongDate(currentDay);
+}
+
+function formatShortDate(today: Date) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(startOfDay(today));
+}
 
 interface HeaderProps {
   organizationName?: string;
@@ -59,16 +90,9 @@ export function Header({
     setNotifications((items) => items.map((item) => ({ ...item, read: true })));
   }
 
-  // Date du jour formatée en français sans emoji
-  const todayFormatted = new Intl.DateTimeFormat("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date());
-
-  // Capitalisation de la première lettre
-  const displayDate = todayFormatted.charAt(0).toUpperCase() + todayFormatted.slice(1);
+  const today = new Date();
+  const todayTooltip = formatToday(today);
+  const todayLabel = formatShortDate(today);
 
   // Initiales pour l'avatar
   const initials = userEmail
@@ -77,7 +101,7 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#E2E8F0] bg-white px-6">
-      {/* Partie gauche : Organisation & Date */}
+      {/* Partie gauche : Organisation */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] px-3 py-1.5">
           <Building className="h-4 w-4 text-[#4F46E5]" />
@@ -87,13 +111,32 @@ export function Header({
           </span>
         </div>
 
-        <div className="hidden lg:block text-xs font-medium text-[#64748B]">
-          {displayDate}
-        </div>
       </div>
 
       {/* Partie droite : Notifications & Profil */}
       <div className="flex items-center gap-3">
+        <div className="relative hidden lg:block">
+          <div className="group relative">
+            <button
+              type="button"
+              aria-label={`Date du jour : ${todayTooltip}`}
+              aria-describedby="today-date-tooltip"
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#475569] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]/30"
+            >
+              <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>{todayLabel}</span>
+            </button>
+            <span
+              id="today-date-tooltip"
+              role="tooltip"
+              className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[#0F172A] px-3 py-1.5 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+            >
+              {todayTooltip}
+              <span className="absolute bottom-full left-1/2 -ml-1 border-x-4 border-b-4 border-x-transparent border-b-[#0F172A]" />
+            </span>
+          </div>
+        </div>
+
         {/* Cloche de notifications */}
         <div className="relative" ref={notificationPanel}>
           <button
