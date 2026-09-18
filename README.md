@@ -1,6 +1,6 @@
 # Solvia
 
-Plateforme web de recouvrement pour PME — suivi des échéances, impayés, relances et scoring de risque.
+Plateforme web de recouvrement pour PME   suivi des échéances, impayés, relances et scoring de risque.
 
 **Production :** [https://solviaa.vercel.app](https://solviaa.vercel.app)
 
