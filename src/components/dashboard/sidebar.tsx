@@ -13,8 +13,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import type { UserRole } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/shared/auth/supabase-browser";
+import { roleHasPermission } from "@/shared/auth/rbac";
+import type { Permission } from "@/shared/auth/types";
 import {
   LayoutDashboard,
   FileText,
@@ -35,12 +38,16 @@ const SIDEBAR_COLLAPSED_KEY = "solvia-sidebar-collapsed";
 
 /**
  * Structure d'un élément de navigation.
+ * `permission`, si défini, masque le lien pour tout rôle qui ne l'a pas —
+ * évite d'envoyer un utilisateur vers une page dont l'API lui répondra 403
+ * (voir scoring/page.tsx, qui plantait sur ce cas précis).
  */
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
   badge?: string;
+  permission?: Permission;
 }
 
 /**
@@ -55,16 +62,19 @@ const mainNav: NavItem[] = [
 ];
 
 const settingsNav: NavItem[] = [
-  { href: "/scoring", label: "Scoring de Risque", icon: Sliders },
-  { href: "/settings/organization", label: "Entreprise & Devise", icon: Building2 },
-  { href: "/settings/team", label: "Équipe & Permissions", icon: ShieldCheck },
-  { href: "/settings/ai-provider", label: "Moteur IA (BYOK)", icon: Bot },
+  { href: "/scoring", label: "Scoring de Risque", icon: Sliders, permission: "scoring:configure" },
+  { href: "/settings/organization", label: "Entreprise & Devise", icon: Building2, permission: "organization:manage" },
+  { href: "/settings/team", label: "Équipe & Permissions", icon: ShieldCheck, permission: "team:manage" },
+  { href: "/settings/ai-provider", label: "Moteur IA (BYOK)", icon: Bot, permission: "ai:configure" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ userRole }: { userRole: UserRole }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const visibleSettingsNav = settingsNav.filter(
+    (item) => !item.permission || roleHasPermission(userRole, item.permission),
+  );
 
   useEffect(() => {
     setIsCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true");
@@ -158,7 +168,7 @@ export function Sidebar() {
             Configuration
           </p>
           <nav className="space-y-1">
-            {settingsNav.map((item) => {
+            {visibleSettingsNav.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (

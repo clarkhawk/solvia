@@ -40,3 +40,25 @@ export function formatMoney(amount: number, currency: string): string {
     return `${amount.toFixed(0)} ${currency}`;
   }
 }
+
+/**
+ * Ordre de grandeur approximatif "1 EUR ≈ N unités de cette devise", utilisé
+ * UNIQUEMENT pour mettre à l'échelle les seuils du module de scoring (voir
+ * modules/scoring/metrics/index.ts). Ce n'est PAS un taux de change fiable :
+ * pas de mise à jour temps réel, à ne jamais utiliser pour des montants
+ * comptables ou des conversions de paiement. XOF/XAF sont arrimés à l'euro
+ * (parité fixe 655,957) ; les autres sont des ordres de grandeur arrondis,
+ * juste pour éviter qu'un seuil calibré en EUR ne devienne absurde dans une
+ * autre devise. À terme, ces seuils devraient être configurables par
+ * organisation plutôt que dérivés d'un taux approximatif.
+ */
+export const CURRENCY_SCALE: Record<SupportedCurrency, number> = {
+  EUR: 1,
+  XOF: 656,
+  XAF: 656,
+  USD: 1.1,
+  GHS: 15,
+  NGN: 1700,
+  MAD: 11,
+  CAD: 1.5,
+};

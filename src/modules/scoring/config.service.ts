@@ -63,6 +63,11 @@ export class ScoringConfigService {
   }
 
   async computeAllClients(organizationId: string): Promise<Array<{ clientId: string; result: ScoringResult }>> {
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { currency: true },
+    });
+
     const clients = await prisma.client.findMany({ where: { organizationId } });
     const results: Array<{ clientId: string; result: ScoringResult }> = [];
 
@@ -72,6 +77,7 @@ export class ScoringConfigService {
 
       const input: ScoringInput = {
         clientId: client.id,
+        currency: organization?.currency,
         invoices: invoices.map((i) => ({
           id: i.id,
           amount: Number(i.amount),

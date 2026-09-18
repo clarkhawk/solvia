@@ -37,6 +37,12 @@ export interface ScoringInput {
   clientId: string;
   invoices: InvoiceSnapshot[];
   paymentHistory: PaymentSnapshot[];
+  /**
+   * Devise de facturation de l'organisation (ex. "XOF", "EUR"). Optionnelle
+   * pour rester compatible avec les appels/tests existants ; en son absence,
+   * les seuils de scoring supposent l'EUR (comportement historique).
+   */
+  currency?: string;
 }
 
 export interface ScoringResult {
