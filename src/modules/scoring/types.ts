@@ -51,6 +51,17 @@ export interface ScoringResult {
   isAtRisk: boolean;
 }
 
+export interface ClientScoringEntry {
+  clientId: string;
+  clientName: string;
+  result: ScoringResult;
+}
+
+export interface ClientScoringListDTO {
+  riskThreshold: number;
+  items: ClientScoringEntry[];
+}
+
 export const DEFAULT_CRITERIA: ScoringCriterion[] = [
   { name: "Montant en retard", metricType: "montant_en_retard", weight: 0.5, enabled: true },
   { name: "Ancienneté du retard", metricType: "anciennete_retard", weight: 0.3, enabled: true },
