@@ -1,4 +1,4 @@
-# Solvia
+# Solviaa
 
 Plateforme web de recouvrement pour PME   suivi des échéances, impayés, relances et scoring de risque.
 
